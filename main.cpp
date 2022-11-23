@@ -2,21 +2,73 @@
 #include <iostream>
 #include "frame.h"
 
-int main(int /*argc*/, char* argv[])
+int main(int argc, char* argv[])
 {
-    std::ifstream ifs(argv[1], std::ios::in | std::ios::binary);
-    std::ofstream ofs("\\\\10.239.141.175\\content-share\\EncoderContent\\Blender_lossless_p010_1080p60.yuv", std::ios::out | std::ios::binary);
-    frame::Y410 frm(1920, 1080);
-    size_t szIn = frm.FrameSize();
-    size_t szOut = 1920 * 1080 * 3;
-    auto bufIn = new char[szIn];
-    auto bufOut = new char[szOut];
+    size_t w = 0;
+    size_t h = 0;
+    std::ifstream fsIn;
+    std::ofstream fsOut;
+    frame::Frame* frmIn = nullptr;
+    frame::Frame* frmOut = nullptr;
 
-    while (ifs.read(bufIn, szIn))
+    for (auto i = 1; i < argc; ++i)
     {
-        frm.ReadFrame(bufIn);
-        frm.WriteFrameP010(bufOut);
-        ofs.write(bufOut, szOut);
+        if (std::strcmp(argv[i], "-w") == 0)
+        {
+            w = strtoull(argv[++i], nullptr, 10);
+        }
+        else if (std::strcmp(argv[i], "-h") == 0)
+        {
+            h = strtoull(argv[++i], nullptr, 10);
+        }
+        else if (std::strncmp(argv[i], "-i", 2) == 0)
+        {
+            if (std::strcmp(argv[i], "-i:nv12") == 0)
+            {
+                frmIn = new frame::NV12(w, h);
+            }
+            else if (std::strcmp(argv[i], "-i:p010") == 0)
+            {
+                frmIn = new frame::P010(w, h);
+            }
+            else if (std::strcmp(argv[i], "-i:y410") == 0)
+            {
+                frmIn = new frame::Y410(w, h);
+            }
+            frmIn->Allocate();
+            fsIn.open(argv[++i], std::ios::in | std::ios::binary);
+        }
+        else if (std::strncmp(argv[i], "-o", 2) == 0)
+        {
+            if (std::strcmp(argv[i], "-o:nv12") == 0)
+            {
+                frmOut = new frame::NV12(w, h);
+            }
+            else if (std::strcmp(argv[i], "-o:p010") == 0)
+            {
+                frmOut = new frame::P010(w, h);
+            }
+            else if (std::strcmp(argv[i], "-o:y410") == 0)
+            {
+                frmOut = new frame::Y410(w, h);
+            }
+            fsOut.open(argv[++i], std::ios::out | std::ios::binary);
+        }
+    }
+
+    if (!frmIn || !frmOut || !fsIn || !fsOut)
+    {
+        return -1;
+    }
+
+    auto bufIn = new char[frmIn->FrameSize()];
+    auto bufOut = new char[frmOut->FrameSize()];
+
+    while (fsIn.read(bufIn, frmIn->FrameSize()))
+    {
+        frmIn->ReadFrame(bufIn);
+        frmIn->WriteFrame(bufOut, frmOut->Format());
+        fsOut.write(bufOut, frmOut->FrameSize());
     }
 
     return 0;
