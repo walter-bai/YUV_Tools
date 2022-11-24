@@ -35,6 +35,10 @@ int main(int argc, char* argv[])
             {
                 frmIn = new frame::Y410(w, h);
             }
+            else if (std::strcmp(argv[i], "-i:yuv44410p") == 0)
+            {
+                frmIn = new frame::YUV44410P(w, h);
+            }
             frmIn->Allocate();
             fsIn.open(argv[++i], std::ios::in | std::ios::binary);
         }
@@ -51,6 +55,10 @@ int main(int argc, char* argv[])
             else if (std::strcmp(argv[i], "-o:y410") == 0)
             {
                 frmOut = new frame::Y410(w, h);
+            }
+            else if (std::strcmp(argv[i], "-o:yuv44410p") == 0)
+            {
+                frmOut = new frame::YUV44410P(w, h);
             }
             fsOut.open(argv[++i], std::ios::out | std::ios::binary);
         }

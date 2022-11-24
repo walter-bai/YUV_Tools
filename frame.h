@@ -9,6 +9,7 @@ enum class FOURCC
     NV12,
     P010,
     Y410,
+    YUV44410P,
 };
 
 #pragma pack(push, 1)
@@ -151,7 +152,7 @@ namespace frame
 
     class Y410 : public Frame
     {
-    protected:
+    public:
         struct Pixel
         {
             uint32_t U : 10;
@@ -192,7 +193,7 @@ namespace frame
 
         void WriteFrame(void* data, FOURCC fmt = FOURCC::UNDEF) const override
         {
-            if (fmt == FOURCC::UNDEF || fmt == FOURCC::Y410)
+            if (fmt == FOURCC::UNDEF || fmt == m_fmt)
             {
                 auto p = reinterpret_cast<Pixel*>(data);
                 for (size_t i = 0; i < m_raw.A.size(); ++i)
@@ -241,6 +242,72 @@ namespace frame
                     *planeUV++ = (m_raw.U[i] + m_raw.U[i + 1] + m_raw.U[i + m_w] + m_raw.U[i + 1 + m_w]) >> 4;
                     *planeUV++ = (m_raw.V[i] + m_raw.V[i + 1] + m_raw.V[i + m_w] + m_raw.V[i + 1 + m_w]) >> 4;
                 }
+            }
+        }
+    };
+
+    class YUV44410P : public Frame  // YUV 444 10bit planar
+    {
+    public:
+        YUV44410P(size_t w, size_t h) : Frame(w, h, FOURCC::YUV44410P) {}
+
+        size_t FrameSize() const override
+        {
+            return m_w * m_h * 6;
+        }
+
+        void Allocate() override
+        {
+            auto numPixel = m_w * m_h;
+
+            m_raw.Y.resize(numPixel, 0);
+            m_raw.U.resize(numPixel, 0);
+            m_raw.V.resize(numPixel, 0);
+        }
+
+        void ReadFrame(const void* data) override
+        {
+            auto pY = reinterpret_cast<const uint16_t*>(data);
+            auto pU = pY + m_raw.Y.size();
+            auto pV = pU + m_raw.Y.size();
+            for (size_t i = 0; i < m_raw.Y.size(); ++i)
+            {
+                m_raw.Y[i] = pY[i];
+                m_raw.U[i] = pU[i];
+                m_raw.V[i] = pV[i];
+            }
+        }
+
+        void WriteFrame(void* data, FOURCC fmt = FOURCC::UNDEF) const override
+        {
+            if (fmt == FOURCC::UNDEF || fmt == m_fmt)
+            {
+                auto pY = reinterpret_cast<uint16_t*>(data);
+                auto pU = pY + m_raw.Y.size();
+                auto pV = pU + m_raw.Y.size();
+                for (size_t i = 0; i < m_raw.Y.size(); ++i)
+                {
+                    pY[i] = m_raw.Y[i];
+                    pU[i] = m_raw.U[i];
+                    pV[i] = m_raw.V[i];
+                }
+            }
+            else if (fmt == FOURCC::Y410)
+            {
+                WriteFrameY410(data);
+            }
+        }
+
+    protected:
+        void WriteFrameY410(void* data) const
+        {
+            auto p = reinterpret_cast<Y410::Pixel*>(data);
+            for (size_t i = 0; i < m_raw.Y.size(); ++i)
+            {
+                p[i].A = 3;
+                p[i].Y = m_raw.Y[i];
+                p[i].U = m_raw.U[i];
+                p[i].V = m_raw.V[i];
             }
         }
     };
