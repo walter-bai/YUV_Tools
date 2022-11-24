@@ -10,6 +10,7 @@ enum class FOURCC
     P010,
     Y410,
     YUV44410P,
+    YUV4208P,
 };
 
 #pragma pack(push, 1)
@@ -308,6 +309,80 @@ namespace frame
                 p[i].Y = m_raw.Y[i];
                 p[i].U = m_raw.U[i];
                 p[i].V = m_raw.V[i];
+            }
+        }
+    };
+
+    class YUV4208P : public Frame  // YUV 420 8bit planar
+    {
+    public:
+        YUV4208P(size_t w, size_t h) : Frame(w, h, FOURCC::YUV4208P) {}
+
+        size_t FrameSize() const override
+        {
+            return m_w * m_h * 3 / 2;
+        }
+
+        void Allocate() override
+        {
+            auto numPixel = m_w * m_h;
+
+            m_raw.Y.resize(numPixel, 0);
+            m_raw.U.resize(numPixel / 4, 0);
+            m_raw.V.resize(numPixel / 4, 0);
+        }
+
+        void ReadFrame(const void* data) override
+        {
+            auto pY = reinterpret_cast<const uint8_t*>(data);
+            for (size_t i = 0; i < m_raw.Y.size(); ++i)
+            {
+                m_raw.Y[i] = pY[i];
+            }
+
+            auto pU = pY + m_raw.Y.size();
+            auto pV = pU + m_raw.U.size();
+            for (size_t i = 0; i < m_raw.U.size(); ++i)
+            {
+                m_raw.U[i] = pU[i];
+                m_raw.V[i] = pV[i];
+            }
+        }
+
+        void WriteFrame(void* data, FOURCC fmt = FOURCC::UNDEF) const override
+        {
+            if (fmt == FOURCC::UNDEF || fmt == m_fmt)
+            {
+                auto pY = reinterpret_cast<uint8_t*>(data);
+                for (size_t i = 0; i < m_raw.Y.size(); ++i)
+                {
+                    pY[i] = m_raw.Y[i];
+                }
+
+                auto pU = pY + m_raw.Y.size();
+                auto pV = pU + m_raw.U.size();
+                for (size_t i = 0; i < m_raw.U.size(); ++i)
+                {
+                    pU[i] = m_raw.U[i];
+                    pV[i] = m_raw.V[i];
+                }
+            }
+            else if (fmt == FOURCC::Y410)
+            {
+                WriteFrameY410(data);
+            }
+        }
+
+    protected:
+        void WriteFrameY410(void* data) const
+        {
+            auto p = reinterpret_cast<Y410::Pixel*>(data);
+            for (size_t i = 0; i < m_raw.Y.size(); ++i)
+            {
+                p[i].A = 3;
+                p[i].Y = m_raw.Y[i] << 2;
+                p[i].U = m_raw.U[i / 4] << 2;
+                p[i].V = m_raw.V[i / 4] << 2;
             }
         }
     };
