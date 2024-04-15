@@ -59,8 +59,7 @@ namespace frame
 
         void ConvertFrom(const Frame &frame)
         {
-            if (GetChromaIDC() != frame.GetChromaIDC() ||
-                m_w != frame.m_w || m_wPadded != frame.m_wPadded ||
+            if (m_w != frame.m_w || m_wPadded != frame.m_wPadded ||
                 m_h != frame.m_h || m_hPadded != frame.m_hPadded)
             {
                 std::exception e("Incompatible frame type!");
@@ -69,32 +68,148 @@ namespace frame
 
             auto depthSrc = frame.GetBitDepth();
             auto depthTarget = GetBitDepth();
+            auto chromaIDCSrc = frame.GetChromaIDC();
+            auto chromaIDCTarget = GetChromaIDC();
 
-            if (depthSrc == depthTarget)
+            if (HasAChannel())
             {
-                m_raw = frame.m_raw;
+                if (frame.m_raw.A.empty())
+                {
+                    m_raw.A.resize(frame.m_raw.Y.size(), 0);
+                }
+                else
+                {
+                    m_raw.A = frame.m_raw.A;
+                }
             }
             else
             {
-                m_raw.A = frame.m_raw.A;
+                m_raw.A.clear();
+            }
 
-                bool rShift = depthSrc > depthTarget;
-                auto shift = rShift ? depthSrc - depthTarget : depthTarget - depthSrc;
+            bool rShift = depthSrc > depthTarget;
+            auto shift = rShift ? depthSrc - depthTarget : depthTarget - depthSrc;
 
-                m_raw.Y.resize(frame.m_raw.Y.size());
-                for (size_t i = 0; i < m_raw.Y.size(); i++)
-                {
-                    m_raw.Y[i] = rShift ? frame.m_raw.Y[i] >> shift : frame.m_raw.Y[i] << shift;
-                }
+#define GET_SRC_PIXEL(PLANE, idx) (rShift ? frame.m_raw.PLANE[idx] >> shift : frame.m_raw.PLANE[idx] << shift)
 
-                m_raw.U.resize(frame.m_raw.U.size());
-                m_raw.V.resize(frame.m_raw.V.size());
+            m_raw.Y.resize(frame.m_raw.Y.size());
+            for (size_t i = 0; i < m_raw.Y.size(); i++)
+            {
+                m_raw.Y[i] = GET_SRC_PIXEL(Y, i);
+            }
+
+            size_t pixelChroma = PixelChroma(true);
+            auto widthChromaPadded = WidthChroma(true);
+            auto heightChromaPadded = HeightChroma(true);
+            m_raw.U.resize(pixelChroma / 2, 0);
+            m_raw.V.resize(pixelChroma / 2, 0);
+            if (chromaIDCSrc == CHROMA_IDC::IDC_400 || chromaIDCTarget == CHROMA_IDC::IDC_400)
+            {
+                return;
+            }
+            else if (chromaIDCSrc == chromaIDCTarget)
+            {
                 for (size_t i = 0; i < m_raw.U.size(); i++)
                 {
-                    m_raw.U[i] = rShift ? frame.m_raw.U[i] >> shift : frame.m_raw.U[i] << shift;
-                    m_raw.V[i] = rShift ? frame.m_raw.V[i] >> shift : frame.m_raw.V[i] << shift;
+                    m_raw.U[i] = GET_SRC_PIXEL(U, i);
+                    m_raw.V[i] = GET_SRC_PIXEL(V, i);
                 }
             }
+            else if (chromaIDCSrc == CHROMA_IDC::IDC_420 && chromaIDCTarget == CHROMA_IDC::IDC_422)
+            {
+                for (size_t h = 0; h < heightChromaPadded / 2; h++)
+                {
+                    for (size_t w = 0; w < widthChromaPadded; w++)
+                    {
+                        auto iSrc = h * widthChromaPadded + w;
+                        auto iDst = 2 * h * widthChromaPadded + w;
+                        m_raw.U[iDst] = GET_SRC_PIXEL(U, iSrc);
+                        m_raw.U[iDst + widthChromaPadded] = m_raw.U[iDst];
+                        m_raw.V[iDst] = GET_SRC_PIXEL(V, iSrc);
+                        m_raw.V[iDst + widthChromaPadded] = m_raw.V[iDst];
+                    }
+                }
+            }
+            else if (chromaIDCSrc == CHROMA_IDC::IDC_420 && chromaIDCTarget == CHROMA_IDC::IDC_444)
+            {
+                for (size_t h = 0; h < heightChromaPadded / 2; h++)
+                {
+                    for (size_t w = 0; w < widthChromaPadded / 2; w++)
+                    {
+                        auto iSrc = h * widthChromaPadded / 2 + w;
+                        auto iDst = 2 * h * widthChromaPadded + 2 * w;
+                        m_raw.U[iDst] = GET_SRC_PIXEL(U, iSrc);
+                        m_raw.U[iDst + 1] = m_raw.U[iDst];
+                        m_raw.U[iDst + widthChromaPadded] = m_raw.U[iDst];
+                        m_raw.U[iDst + widthChromaPadded + 1] = m_raw.U[iDst];
+                        m_raw.V[iDst] = GET_SRC_PIXEL(V, iSrc);
+                        m_raw.V[iDst + 1] = m_raw.V[iDst];
+                        m_raw.V[iDst + widthChromaPadded] = m_raw.V[iDst];
+                        m_raw.V[iDst + widthChromaPadded + 1] = m_raw.V[iDst];
+                    }
+                }
+            }
+            else if (chromaIDCSrc == CHROMA_IDC::IDC_422 && chromaIDCTarget == CHROMA_IDC::IDC_444)
+            {
+                for (size_t h = 0; h < heightChromaPadded; h++)
+                {
+                    for (size_t w = 0; w < widthChromaPadded / 2; w++)
+                    {
+                        auto iSrc = h * widthChromaPadded / 2 + w;
+                        auto iDst = h * widthChromaPadded + 2 * w;
+                        m_raw.U[iDst] = GET_SRC_PIXEL(U, iSrc);
+                        m_raw.U[iDst + 1] = m_raw.U[iDst];
+                        m_raw.V[iDst] = GET_SRC_PIXEL(V, iSrc);
+                        m_raw.V[iDst + 1] = m_raw.V[iDst];
+                    }
+                }
+            }
+            else if (chromaIDCSrc == CHROMA_IDC::IDC_422 && chromaIDCTarget == CHROMA_IDC::IDC_420)
+            {
+                for (size_t h = 0; h < heightChromaPadded * 2; h += 2)
+                {
+                    for (size_t w = 0; w < widthChromaPadded; w++)
+                    {
+                        auto iSrc0 = h * widthChromaPadded + w;
+                        auto iSrc1 = (h + 1) * widthChromaPadded + w;
+                        auto iDst = h / 2 * widthChromaPadded + w;
+                        m_raw.U[iDst] = (GET_SRC_PIXEL(U, iSrc0) + GET_SRC_PIXEL(U, iSrc1)) / 2;
+                        m_raw.V[iDst] = (GET_SRC_PIXEL(V, iSrc0) + GET_SRC_PIXEL(V, iSrc1)) / 2;
+                    }
+                }
+            }
+            else if (chromaIDCSrc == CHROMA_IDC::IDC_444 && chromaIDCTarget == CHROMA_IDC::IDC_422)
+            {
+                for (size_t h = 0; h < heightChromaPadded; h++)
+                {
+                    for (size_t w = 0; w < widthChromaPadded * 2; w += 2)
+                    {
+                        auto iSrc0 = h * widthChromaPadded * 2 + w;
+                        auto iSrc1 = h * widthChromaPadded * 2 + w + 1;
+                        auto iDst =  h * widthChromaPadded + w / 2;
+                        m_raw.U[iDst] = (GET_SRC_PIXEL(U, iSrc0) + GET_SRC_PIXEL(U, iSrc1)) / 2;
+                        m_raw.V[iDst] = (GET_SRC_PIXEL(V, iSrc0) + GET_SRC_PIXEL(V, iSrc1)) / 2;
+                    }
+                }
+            }
+            else  // chromaIDCSrc == CHROMA_IDC::IDC_444 && chromaIDCTarget == CHROMA_IDC::IDC_420
+            {
+                for (size_t h = 0; h < heightChromaPadded * 2; h += 2)
+                {
+                    for (size_t w = 0; w < widthChromaPadded * 2; w += 2)
+                    {
+                        auto iSrc0 = h * widthChromaPadded * 2 + w;
+                        auto iSrc1 = h * widthChromaPadded * 2 + w + 1;
+                        auto iSrc2 = (h + 1) * widthChromaPadded * 2 + w;
+                        auto iSrc3 = (h + 1) * widthChromaPadded * 2 + w + 1;
+                        auto iDst = h / 2 * widthChromaPadded + w / 2;
+                        m_raw.U[iDst] = (GET_SRC_PIXEL(U, iSrc0) + GET_SRC_PIXEL(U, iSrc1) + GET_SRC_PIXEL(U, iSrc2) + GET_SRC_PIXEL(U, iSrc3)) / 4;
+                        m_raw.V[iDst] = (GET_SRC_PIXEL(V, iSrc0) + GET_SRC_PIXEL(V, iSrc1) + GET_SRC_PIXEL(V, iSrc2) + GET_SRC_PIXEL(V, iSrc3)) / 4;
+                    }
+                }
+            }
+
+#undef GET_SRC_PIXEL
         }
 
         void Allocate()
@@ -512,14 +627,14 @@ namespace frame
             size_t skipped = 0;
             for (size_t i = 0; i < m_w * m_h; ++i)
             {
-                m_raw.Y[i + skipped] = p[i].Y;
+                m_raw.Y[i + skipped] = p[i].Y >> 6;
                 if ((i + skipped) % 2 == 0)
                 {
-                    m_raw.U[(i + skipped) / 2] = p[i].Chroma;
+                    m_raw.U[(i + skipped) / 2] = p[i].Chroma >> 6;
                 }
                 else
                 {
-                    m_raw.V[(i + skipped) / 2] = p[i].Chroma;
+                    m_raw.V[(i + skipped) / 2] = p[i].Chroma >> 6;
                 }
                 if (i % m_w == m_w - 1)
                 {
@@ -535,14 +650,14 @@ namespace frame
             auto p = reinterpret_cast<Pixel*>(data);
             for (size_t i = 0; i < m_raw.Y.size(); ++i)
             {
-                p[i].Y = m_raw.Y[i];
+                p[i].Y = m_raw.Y[i] << 6;
                 if (i % 2 == 0)
                 {
-                    p[i].Chroma = m_raw.U[i / 2];
+                    p[i].Chroma = m_raw.U[i / 2] << 6;
                 }
                 else
                 {
-                    p[i].Chroma = m_raw.V[i / 2];
+                    p[i].Chroma = m_raw.V[i / 2] << 6;
                 }
             }
         }
