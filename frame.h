@@ -1,7 +1,17 @@
 #pragma once
 
+#include <iostream>
 #include <cstdint>
 #include <vector>
+#include <exception>
+
+enum class CHROMA_IDC
+{
+    IDC_400,
+    IDC_420,
+    IDC_422,
+    IDC_444,
+};
 
 enum class FOURCC
 {
@@ -11,6 +21,7 @@ enum class FOURCC
     Y410,
     YUV44410P,
     YUV4208P,
+    Y210,
 };
 
 #pragma pack(push, 1)
@@ -19,7 +30,7 @@ namespace frame
 {
     struct Raw
     {
-        using value_t = uint64_t;
+        using value_t = uint16_t;
 
         std::vector<value_t> A;
         std::vector<value_t> Y;
@@ -30,126 +41,372 @@ namespace frame
     class Frame
     {
     public:
-        Frame(size_t w, size_t h, FOURCC fmt) : m_w(w), m_h(h), m_fmt(fmt) {}
+        Frame(size_t w, size_t h, size_t padding = 0) : m_w(w), m_h(h)
+        {
+            if (padding)
+            {
+                m_wPadded = (m_w + padding - 1) / padding * padding;
+                m_hPadded = (m_h + padding - 1) / padding * padding;
+            }
+            else
+            {
+                m_wPadded = m_w;
+                m_hPadded = m_h;
+            }
+
+            std::cout << "Padded width is: " << m_wPadded << ", height is: " << m_hPadded << std::endl;
+        }
+
+        void ConvertFrom(const Frame &frame)
+        {
+            if (GetChromaIDC() != frame.GetChromaIDC() ||
+                m_w != frame.m_w || m_wPadded != frame.m_wPadded ||
+                m_h != frame.m_h || m_hPadded != frame.m_hPadded)
+            {
+                std::exception e("Incompatible frame type!");
+                throw e;
+            }
+
+            auto depthSrc = frame.GetBitDepth();
+            auto depthTarget = GetBitDepth();
+
+            if (depthSrc == depthTarget)
+            {
+                m_raw = frame.m_raw;
+            }
+            else
+            {
+                m_raw.A = frame.m_raw.A;
+
+                bool rShift = depthSrc > depthTarget;
+                auto shift = rShift ? depthSrc - depthTarget : depthTarget - depthSrc;
+
+                m_raw.Y.resize(frame.m_raw.Y.size());
+                for (size_t i = 0; i < m_raw.Y.size(); i++)
+                {
+                    m_raw.Y[i] = rShift ? frame.m_raw.Y[i] >> shift : frame.m_raw.Y[i] << shift;
+                }
+
+                m_raw.U.resize(frame.m_raw.U.size());
+                m_raw.V.resize(frame.m_raw.V.size());
+                for (size_t i = 0; i < m_raw.U.size(); i++)
+                {
+                    m_raw.U[i] = rShift ? frame.m_raw.U[i] >> shift : frame.m_raw.U[i] << shift;
+                    m_raw.V[i] = rShift ? frame.m_raw.V[i] >> shift : frame.m_raw.V[i] << shift;
+                }
+            }
+        }
+
+        void Allocate()
+        {
+            size_t pixelLuma = PixelLuma(true);
+            size_t pixelChroma = PixelChroma(true);
+
+            if (HasAChannel())
+            {
+                m_raw.A.resize(pixelLuma, 0);
+            }
+
+            m_raw.Y.resize(pixelLuma, 0);
+            m_raw.U.resize(pixelChroma / 2, 0);
+            m_raw.V.resize(pixelChroma / 2, 0);
+        }
+
         virtual ~Frame() = default;
-
-        FOURCC Format() const { return m_fmt; }
-
-        virtual size_t FrameSize() const = 0;
-        virtual void Allocate() = 0;
+        virtual size_t FrameSize(bool padded) const = 0;
+        virtual CHROMA_IDC GetChromaIDC() const = 0;
+        virtual uint8_t GetBitDepth() const = 0;
+        virtual bool HasAChannel() const = 0;
         virtual void ReadFrame(const void* data) = 0;
-        virtual void WriteFrame(void* data, FOURCC fmt = FOURCC::UNDEF) const = 0;
+        virtual void WriteFrame(void* data) const = 0;
+
+    protected:
+        size_t PixelLuma(bool padded) const
+        {
+            auto w = padded ? m_wPadded : m_w;
+            auto h = padded ? m_hPadded : m_h;
+
+            return w * h;
+        }
+
+        size_t PixelChroma(bool padded) const
+        {
+            size_t pixelLuma = PixelLuma(padded);
+            size_t pixelChroma;
+
+            switch (GetChromaIDC())
+            {
+            case CHROMA_IDC::IDC_420:
+                pixelChroma = pixelLuma / 2;
+                break;
+            case CHROMA_IDC::IDC_422:
+                pixelChroma = pixelLuma;
+                break;
+            case CHROMA_IDC::IDC_444:
+                pixelChroma = pixelLuma * 2;
+                break;
+            case CHROMA_IDC::IDC_400:
+            default:
+                pixelChroma = 0;
+                break;
+            }
+
+            return pixelChroma;
+        }
+
+        size_t WidthChroma(bool padded) const
+        {
+            size_t widthLuma = padded ? m_wPadded : m_w;
+            size_t widthChroma;
+
+            switch (GetChromaIDC())
+            {
+            case CHROMA_IDC::IDC_420:
+            case CHROMA_IDC::IDC_422:
+                widthChroma = widthLuma / 2;
+                break;
+            case CHROMA_IDC::IDC_444:
+                widthChroma = widthLuma;
+                break;
+            case CHROMA_IDC::IDC_400:
+            default:
+                widthChroma = 0;
+                break;
+            }
+
+            return widthChroma;
+        }
+
+        size_t HeightChroma(bool padded) const
+        {
+            size_t heightLuma = padded ? m_hPadded : m_h;
+            size_t heightChroma;
+
+            switch (GetChromaIDC())
+            {
+            case CHROMA_IDC::IDC_420:
+                heightChroma = heightLuma / 2;
+                break;
+            case CHROMA_IDC::IDC_422:
+            case CHROMA_IDC::IDC_444:
+                heightChroma = heightLuma;
+                break;
+            case CHROMA_IDC::IDC_400:
+            default:
+                heightChroma = 0;
+                break;
+            }
+
+            return heightChroma;
+        }
+
+        void ReplicateBoundary()
+        {
+            if (HasAChannel())
+            {
+                for (size_t h = 0; h < m_h; h++)
+                {
+                    for (size_t w = m_w; w < m_wPadded; w++)
+                    {
+                        m_raw.A[h * m_wPadded + w] = m_raw.A[h * m_wPadded + m_w - 1];
+                    }
+                }
+                for (size_t h = m_h; h < m_hPadded; h++)
+                {
+                    for (size_t w = 0; w < m_wPadded; w++)
+                    {
+                        m_raw.A[h * m_wPadded + w] = m_raw.A[(m_h - 1) * m_wPadded + w];
+                    }
+                }
+            }
+
+            for (size_t h = 0; h < m_h; h++)
+            {
+                for (size_t w = m_w; w < m_wPadded; w++)
+                {
+                    m_raw.Y[h * m_wPadded + w] = m_raw.Y[h * m_wPadded + m_w - 1];
+                }
+            }
+            for (size_t h = m_h; h < m_hPadded; h++)
+            {
+                for (size_t w = 0; w < m_wPadded; w++)
+                {
+                    m_raw.Y[h * m_wPadded + w] = m_raw.Y[(m_h - 1) * m_wPadded + w];
+                }
+            }
+
+            auto widthChroma = WidthChroma(false);
+            auto widthChromaPadded = WidthChroma(true);
+            auto heightChroma = HeightChroma(false);
+            auto heightChromaPadded = HeightChroma(true);
+
+            for (size_t h = 0; h < heightChroma; h++)
+            {
+                for (size_t w = widthChroma; w < widthChromaPadded; w++)
+                {
+                    m_raw.U[h * widthChromaPadded + w] = m_raw.U[h * widthChromaPadded + widthChroma - 1];
+                    m_raw.V[h * widthChromaPadded + w] = m_raw.V[h * widthChromaPadded + widthChroma - 1];
+                }
+            }
+            for (size_t h = heightChroma; h < heightChromaPadded; h++)
+            {
+                for (size_t w = 0; w < widthChromaPadded; w++)
+                {
+                    m_raw.U[h * widthChromaPadded + w] = m_raw.U[(heightChroma - 1) * widthChromaPadded + w];
+                    m_raw.V[h * widthChromaPadded + w] = m_raw.V[(heightChroma - 1) * widthChromaPadded + w];
+                }
+            }
+        }
 
     protected:
         size_t m_w = 0;
+        size_t m_wPadded = 0;
         size_t m_h = 0;
-        FOURCC m_fmt = FOURCC::UNDEF;
+        size_t m_hPadded = 0;
         Raw m_raw;
     };
 
-    class NV12 : public Frame
+    template <typename pixel_t, CHROMA_IDC IDC, uint8_t DEPTH>
+    class FrameNonPacked : public Frame
     {
     public:
-        NV12(size_t w, size_t h) : Frame(w, h, FOURCC::NV12) {}
+        FrameNonPacked(size_t w, size_t h, size_t padding = 0) : Frame(w, h, padding) {}
 
-        size_t FrameSize() const override
+        size_t FrameSize(bool padded) const override
         {
-            return m_w * m_h * 3 / 2;
+            return (PixelLuma(padded) + PixelChroma(padded)) * sizeof(pixel_t);
         }
 
-        void Allocate() override
+        CHROMA_IDC GetChromaIDC() const override
         {
-            auto numPixel = m_w * m_h;
-
-            m_raw.Y.resize(numPixel, 0);
-            m_raw.U.resize(numPixel / 4, 0);
-            m_raw.V.resize(numPixel / 4, 0);
+            return IDC;
         }
+
+        uint8_t GetBitDepth() const override
+        {
+            return DEPTH;
+        }
+
+        bool HasAChannel() const override
+        {
+            return false;
+        }
+    };
+
+    template <typename pixel_t, CHROMA_IDC IDC, uint8_t DEPTH, uint8_t SHIFT = 0>
+    class FramePlanar : public FrameNonPacked<pixel_t, IDC, DEPTH>
+    {
+    public:
+        FramePlanar(size_t w, size_t h, size_t padding = 0) : FrameNonPacked(w, h, padding) {}
 
         void ReadFrame(const void* data) override
         {
-            auto p = reinterpret_cast<const uint8_t*>(data);
-            for (size_t i = 0; i < m_raw.Y.size(); ++i)
+            auto p = reinterpret_cast<const pixel_t*>(data);
+            size_t skipped = 0;
+            for (size_t i = 0; i < PixelLuma(false); i++)
             {
-                m_raw.Y[i] = p[i];
+                m_raw.Y[i + skipped] = p[i] >> SHIFT;
+                if (i % m_w == m_w - 1)
+                {
+                    skipped += m_wPadded - m_w;
+                }
             }
 
-            p += m_raw.Y.size();
-            for (size_t i = 0; i < m_raw.U.size(); i += 2)
+            auto widthChroma = WidthChroma(false);
+            auto widthChromaPadded = WidthChroma(true);
+
+            p += PixelLuma(false);
+            skipped = 0;
+            size_t pixelU = PixelChroma(false) / 2;
+            for (size_t i = 0; i < pixelU; i++)
             {
-                m_raw.U[i] = p[i];
-                m_raw.V[i] = p[i + 1];
+                m_raw.U[i + skipped] = p[i] >> SHIFT;
+                m_raw.V[i + skipped] = p[i + pixelU] >> SHIFT;
+                if (i % widthChroma == widthChroma - 1)
+                {
+                    skipped += widthChromaPadded - widthChroma;
+                }
             }
+
+            ReplicateBoundary();
         }
 
-        void WriteFrame(void* data, FOURCC fmt = FOURCC::UNDEF) const override
+        void WriteFrame(void* data) const override
         {
-            auto p = reinterpret_cast<uint8_t*>(data);
-            for (size_t i = 0; i < m_raw.Y.size(); ++i)
+            auto p = reinterpret_cast<pixel_t*>(data);
+            for (size_t i = 0; i < m_raw.Y.size(); i++)
             {
-                p[i] = m_raw.Y[i];
+                p[i] = static_cast<pixel_t>(m_raw.Y[i] << SHIFT);
             }
 
             p += m_raw.Y.size();
-            for (size_t i = 0; i < m_raw.U.size(); i += 2)
+            size_t pixelU = m_raw.U.size();
+            for (size_t i = 0; i < pixelU; i++)
             {
-                p[i] = m_raw.U[i];
-                p[i + 1] = m_raw.V[i];
+                p[i] = static_cast<pixel_t>(m_raw.U[i] << SHIFT);
+                p[i + pixelU] = static_cast<pixel_t>(m_raw.V[i] << SHIFT);
             }
         }
     };
 
-    class P010 : public Frame
+    template <typename pixel_t, CHROMA_IDC IDC, uint8_t DEPTH, uint8_t SHIFT = 0>
+    class FrameInterleaved : public FrameNonPacked<pixel_t, IDC, DEPTH>
     {
     public:
-        P010(size_t w, size_t h) : Frame(w, h, FOURCC::P010) {}
-
-        size_t FrameSize() const override
-        {
-            return m_w * m_h * 3;
-        }
-
-        void Allocate() override
-        {
-            auto numPixel = m_w * m_h;
-
-            m_raw.Y.resize(numPixel, 0);
-            m_raw.U.resize(numPixel / 4, 0);
-            m_raw.V.resize(numPixel / 4, 0);
-        }
+        FrameInterleaved(size_t w, size_t h, size_t padding = 0) : FrameNonPacked(w, h, padding) {}
 
         void ReadFrame(const void* data) override
         {
-            auto p = reinterpret_cast<const uint16_t*>(data);
-            for (size_t i = 0; i < m_raw.Y.size(); ++i)
+            auto p = reinterpret_cast<const pixel_t*>(data);
+            size_t skipped = 0;
+            for (size_t i = 0; i < PixelLuma(false); i++)
             {
-                m_raw.Y[i] = p[i] >> 6;
+                m_raw.Y[i + skipped] = p[i] >> SHIFT;
+                if (i % m_w == m_w - 1)
+                {
+                    skipped += m_wPadded - m_w;
+                }
             }
 
-            p += m_raw.Y.size();
-            for (size_t i = 0; i < m_raw.U.size(); i += 2)
+            auto widthChroma = WidthChroma(false);
+            auto widthChromaPadded = WidthChroma(true);
+
+            p += PixelLuma(false);
+            skipped = 0;
+            for (size_t i = 0; i < PixelChroma(false) / 2; i++)
             {
-                m_raw.U[i] = p[i] >> 6;
-                m_raw.V[i] = p[i + 1] >> 6;
+                m_raw.U[i + skipped] = p[2 * i] >> SHIFT;
+                m_raw.V[i + skipped] = p[2 * i + 1] >> SHIFT;
+                if (i % widthChroma == widthChroma - 1)
+                {
+                    skipped += widthChromaPadded - widthChroma;
+                }
             }
+
+            ReplicateBoundary();
         }
 
-        void WriteFrame(void* data, FOURCC fmt = FOURCC::UNDEF) const override
+        void WriteFrame(void* data) const override
         {
-            auto p = reinterpret_cast<uint16_t*>(data);
-            for (size_t i = 0; i < m_raw.Y.size(); ++i)
+            auto p = reinterpret_cast<pixel_t*>(data);
+            for (size_t i = 0; i < m_raw.Y.size(); i++)
             {
-                p[i] = m_raw.Y[i] << 6;
+                p[i] = static_cast<pixel_t>(m_raw.Y[i] << SHIFT);
             }
 
             p += m_raw.Y.size();
-            for (size_t i = 0; i < m_raw.U.size(); i += 2)
+            for (size_t i = 0; i < m_raw.U.size(); i++)
             {
-                p[i] = m_raw.U[i] << 6;
-                p[i + 1] = m_raw.V[i] << 6;
+                p[2 * i] = static_cast<pixel_t>(m_raw.U[i] << SHIFT);
+                p[2 * i + 1] = static_cast<pixel_t>(m_raw.V[i] << SHIFT);
             }
         }
     };
+
+    using NV12 = FrameInterleaved<uint8_t, CHROMA_IDC::IDC_420, 8>;
+    using P010 = FrameInterleaved<uint16_t, CHROMA_IDC::IDC_420, 10, 6>;
+    using YUV4208P = FramePlanar<uint8_t, CHROMA_IDC::IDC_420, 8>;
+    using YUV44410P = FramePlanar<uint16_t, CHROMA_IDC::IDC_444, 10>;
 
     class Y410 : public Frame
     {
@@ -163,149 +420,53 @@ namespace frame
         };
 
     public:
-        Y410(size_t w, size_t h) : Frame(w, h, FOURCC::Y410) {}
+        Y410(size_t w, size_t h, size_t padding = 0) : Frame(w, h, padding) {}
 
-        size_t FrameSize() const override
+        size_t FrameSize(bool padded) const override
         {
-            return m_w * m_h * sizeof(Pixel);
+            return (padded ? m_wPadded * m_hPadded : m_w * m_h) * sizeof(Pixel);
         }
 
-        void Allocate() override
+        CHROMA_IDC GetChromaIDC() const override
         {
-            auto numPixel = m_w * m_h;
+            return CHROMA_IDC::IDC_444;
+        }
 
-            m_raw.A.resize(numPixel, 0);
-            m_raw.Y.resize(numPixel, 0);
-            m_raw.U.resize(numPixel, 0);
-            m_raw.V.resize(numPixel, 0);
+        uint8_t GetBitDepth() const override
+        {
+            return 10;
+        }
+
+        bool HasAChannel() const override
+        {
+            return true;
         }
 
         void ReadFrame(const void* data) override
         {
             auto p = reinterpret_cast<const Pixel*>(data);
+            size_t skipped = 0;
+            for (size_t i = 0; i < m_w * m_h; ++i)
+            {
+                m_raw.A[i + skipped] = p[i].A;
+                m_raw.Y[i + skipped] = p[i].Y;
+                m_raw.U[i + skipped] = p[i].U;
+                m_raw.V[i + skipped] = p[i].V;
+                if (i % m_w == m_w - 1)
+                {
+                    skipped += m_wPadded - m_w;
+                }
+            }
+
+            ReplicateBoundary();
+        }
+
+        void WriteFrame(void* data) const override
+        {
+            auto p = reinterpret_cast<Pixel*>(data);
             for (size_t i = 0; i < m_raw.A.size(); ++i)
             {
-                m_raw.A[i] = p[i].A;
-                m_raw.Y[i] = p[i].Y;
-                m_raw.U[i] = p[i].U;
-                m_raw.V[i] = p[i].V;
-            }
-        }
-
-        void WriteFrame(void* data, FOURCC fmt = FOURCC::UNDEF) const override
-        {
-            if (fmt == FOURCC::UNDEF || fmt == m_fmt)
-            {
-                auto p = reinterpret_cast<Pixel*>(data);
-                for (size_t i = 0; i < m_raw.A.size(); ++i)
-                {
-                    p[i].A = m_raw.A[i];
-                    p[i].Y = m_raw.Y[i];
-                    p[i].U = m_raw.U[i];
-                    p[i].V = m_raw.V[i];
-                }
-            }
-            else if (fmt == FOURCC::P010)
-            {
-                WriteFrameP010(data);
-            }
-            else if (fmt == FOURCC::NV12)
-            {
-                WriteFrameNV12(data);
-            }
-        }
-
-    protected:
-        void WriteFrameP010(void* data) const
-        {
-            auto planeY = reinterpret_cast<uint16_t*>(data);
-            auto planeUV = planeY + m_raw.Y.size();
-            for (size_t i = 0; i < m_raw.Y.size(); ++i)
-            {
-                *planeY++ = m_raw.Y[i] << 6;
-                if (i / m_w % 2 == 0 && i % m_w % 2 == 0)
-                {
-                    *planeUV++ = (m_raw.U[i] + m_raw.U[i + 1] + m_raw.U[i + m_w] + m_raw.U[i + 1 + m_w]) << 4;
-                    *planeUV++ = (m_raw.V[i] + m_raw.V[i + 1] + m_raw.V[i + m_w] + m_raw.V[i + 1 + m_w]) << 4;
-                }
-            }
-        }
-
-        void WriteFrameNV12(void* data) const
-        {
-            auto planeY = reinterpret_cast<uint8_t*>(data);
-            auto planeUV = planeY + m_raw.Y.size();
-            for (size_t i = 0; i < m_raw.Y.size(); ++i)
-            {
-                *planeY++ = m_raw.Y[i] >> 2;
-                if (i / m_w % 2 == 0 && i % m_w % 2 == 0)
-                {
-                    *planeUV++ = (m_raw.U[i] + m_raw.U[i + 1] + m_raw.U[i + m_w] + m_raw.U[i + 1 + m_w]) >> 4;
-                    *planeUV++ = (m_raw.V[i] + m_raw.V[i + 1] + m_raw.V[i + m_w] + m_raw.V[i + 1 + m_w]) >> 4;
-                }
-            }
-        }
-    };
-
-    class YUV44410P : public Frame  // YUV 444 10bit planar
-    {
-    public:
-        YUV44410P(size_t w, size_t h) : Frame(w, h, FOURCC::YUV44410P) {}
-
-        size_t FrameSize() const override
-        {
-            return m_w * m_h * 6;
-        }
-
-        void Allocate() override
-        {
-            auto numPixel = m_w * m_h;
-
-            m_raw.Y.resize(numPixel, 0);
-            m_raw.U.resize(numPixel, 0);
-            m_raw.V.resize(numPixel, 0);
-        }
-
-        void ReadFrame(const void* data) override
-        {
-            auto pY = reinterpret_cast<const uint16_t*>(data);
-            auto pU = pY + m_raw.Y.size();
-            auto pV = pU + m_raw.Y.size();
-            for (size_t i = 0; i < m_raw.Y.size(); ++i)
-            {
-                m_raw.Y[i] = pY[i];
-                m_raw.U[i] = pU[i];
-                m_raw.V[i] = pV[i];
-            }
-        }
-
-        void WriteFrame(void* data, FOURCC fmt = FOURCC::UNDEF) const override
-        {
-            if (fmt == FOURCC::UNDEF || fmt == m_fmt)
-            {
-                auto pY = reinterpret_cast<uint16_t*>(data);
-                auto pU = pY + m_raw.Y.size();
-                auto pV = pU + m_raw.Y.size();
-                for (size_t i = 0; i < m_raw.Y.size(); ++i)
-                {
-                    pY[i] = m_raw.Y[i];
-                    pU[i] = m_raw.U[i];
-                    pV[i] = m_raw.V[i];
-                }
-            }
-            else if (fmt == FOURCC::Y410)
-            {
-                WriteFrameY410(data);
-            }
-        }
-
-    protected:
-        void WriteFrameY410(void* data) const
-        {
-            auto p = reinterpret_cast<Y410::Pixel*>(data);
-            for (size_t i = 0; i < m_raw.Y.size(); ++i)
-            {
-                p[i].A = 3;
+                p[i].A = m_raw.A[i];
                 p[i].Y = m_raw.Y[i];
                 p[i].U = m_raw.U[i];
                 p[i].V = m_raw.V[i];
@@ -313,79 +474,101 @@ namespace frame
         }
     };
 
-    class YUV4208P : public Frame  // YUV 420 8bit planar
+    class Y210 : public Frame
     {
     public:
-        YUV4208P(size_t w, size_t h) : Frame(w, h, FOURCC::YUV4208P) {}
-
-        size_t FrameSize() const override
+        struct Pixel
         {
-            return m_w * m_h * 3 / 2;
+            uint32_t Y : 16;
+            uint32_t Chroma : 16;  // even for U, odd for V
+        };
+
+    public:
+        Y210(size_t w, size_t h, size_t padding = 0) : Frame(w, h, padding) {}
+
+        size_t FrameSize(bool padded) const override
+        {
+            return (padded ? m_wPadded * m_hPadded : m_w * m_h) * sizeof(Pixel);
         }
 
-        void Allocate() override
+        CHROMA_IDC GetChromaIDC() const override
         {
-            auto numPixel = m_w * m_h;
+            return CHROMA_IDC::IDC_422;
+        }
 
-            m_raw.Y.resize(numPixel, 0);
-            m_raw.U.resize(numPixel / 4, 0);
-            m_raw.V.resize(numPixel / 4, 0);
+        uint8_t GetBitDepth() const override
+        {
+            return 10;
+        }
+
+        bool HasAChannel() const override
+        {
+            return false;
         }
 
         void ReadFrame(const void* data) override
         {
-            auto pY = reinterpret_cast<const uint8_t*>(data);
-            for (size_t i = 0; i < m_raw.Y.size(); ++i)
+            auto p = reinterpret_cast<const Pixel*>(data);
+            size_t skipped = 0;
+            for (size_t i = 0; i < m_w * m_h; ++i)
             {
-                m_raw.Y[i] = pY[i];
-            }
-
-            auto pU = pY + m_raw.Y.size();
-            auto pV = pU + m_raw.U.size();
-            for (size_t i = 0; i < m_raw.U.size(); ++i)
-            {
-                m_raw.U[i] = pU[i];
-                m_raw.V[i] = pV[i];
-            }
-        }
-
-        void WriteFrame(void* data, FOURCC fmt = FOURCC::UNDEF) const override
-        {
-            if (fmt == FOURCC::UNDEF || fmt == m_fmt)
-            {
-                auto pY = reinterpret_cast<uint8_t*>(data);
-                for (size_t i = 0; i < m_raw.Y.size(); ++i)
+                m_raw.Y[i + skipped] = p[i].Y;
+                if ((i + skipped) % 2 == 0)
                 {
-                    pY[i] = m_raw.Y[i];
+                    m_raw.U[(i + skipped) / 2] = p[i].Chroma;
                 }
-
-                auto pU = pY + m_raw.Y.size();
-                auto pV = pU + m_raw.U.size();
-                for (size_t i = 0; i < m_raw.U.size(); ++i)
+                else
                 {
-                    pU[i] = m_raw.U[i];
-                    pV[i] = m_raw.V[i];
+                    m_raw.V[(i + skipped) / 2] = p[i].Chroma;
+                }
+                if (i % m_w == m_w - 1)
+                {
+                    skipped += m_wPadded - m_w;
                 }
             }
-            else if (fmt == FOURCC::Y410)
-            {
-                WriteFrameY410(data);
-            }
+
+            ReplicateBoundary();
         }
 
-    protected:
-        void WriteFrameY410(void* data) const
+        void WriteFrame(void* data) const override
         {
-            auto p = reinterpret_cast<Y410::Pixel*>(data);
+            auto p = reinterpret_cast<Pixel*>(data);
             for (size_t i = 0; i < m_raw.Y.size(); ++i)
             {
-                p[i].A = 3;
-                p[i].Y = m_raw.Y[i] << 2;
-                p[i].U = m_raw.U[i / 4] << 2;
-                p[i].V = m_raw.V[i / 4] << 2;
+                p[i].Y = m_raw.Y[i];
+                if (i % 2 == 0)
+                {
+                    p[i].Chroma = m_raw.U[i / 2];
+                }
+                else
+                {
+                    p[i].Chroma = m_raw.V[i / 2];
+                }
             }
         }
     };
+
+    Frame* CreateFrame(FOURCC fourcc, size_t w, size_t h, size_t padding)
+    {
+        switch (fourcc)
+        {
+        case FOURCC::NV12:
+            return new NV12(w, h, padding);
+        case FOURCC::P010:
+            return new P010(w, h, padding);
+        case FOURCC::Y410:
+            return new Y410(w, h, padding);
+        case FOURCC::YUV44410P:
+            return new YUV44410P(w, h, padding);
+        case FOURCC::YUV4208P:
+            return new YUV4208P(w, h, padding);
+        case FOURCC::Y210:
+            return new Y210(w, h, padding);
+        case FOURCC::UNDEF:
+        default:
+            return nullptr;
+        }
+    }
 }
 
 #pragma pack(pop)

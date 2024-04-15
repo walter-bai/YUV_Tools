@@ -6,10 +6,13 @@ int main(int argc, char* argv[])
 {
     size_t w = 0;
     size_t h = 0;
+    FOURCC fmtIn = FOURCC::UNDEF;
+    FOURCC fmtOut = FOURCC::UNDEF;
     std::ifstream fsIn;
     std::ofstream fsOut;
     frame::Frame* frmIn = nullptr;
     frame::Frame* frmOut = nullptr;
+    size_t padding = 0;
 
     for (auto i = 1; i < argc; ++i)
     {
@@ -25,66 +28,83 @@ int main(int argc, char* argv[])
         {
             if (std::strcmp(argv[i], "-i:nv12") == 0)
             {
-                frmIn = new frame::NV12(w, h);
+                fmtIn = FOURCC::NV12;
             }
             else if (std::strcmp(argv[i], "-i:p010") == 0)
             {
-                frmIn = new frame::P010(w, h);
+                fmtIn = FOURCC::P010;
             }
             else if (std::strcmp(argv[i], "-i:y410") == 0)
             {
-                frmIn = new frame::Y410(w, h);
+                fmtIn = FOURCC::Y410;
             }
             else if (std::strcmp(argv[i], "-i:yuv44410p") == 0)
             {
-                frmIn = new frame::YUV44410P(w, h);
+                fmtIn = FOURCC::YUV44410P;
             }
             else if (std::strcmp(argv[i], "-i:yuv4208p") == 0)
             {
-                frmIn = new frame::YUV4208P(w, h);
+                fmtIn = FOURCC::YUV4208P;
             }
-            frmIn->Allocate();
+            else if (std::strcmp(argv[i], "-i:y210") == 0)
+            {
+                fmtIn = FOURCC::Y210;
+            }
             fsIn.open(argv[++i], std::ios::in | std::ios::binary);
         }
         else if (std::strncmp(argv[i], "-o", 2) == 0)
         {
             if (std::strcmp(argv[i], "-o:nv12") == 0)
             {
-                frmOut = new frame::NV12(w, h);
+                fmtOut = FOURCC::NV12;
             }
             else if (std::strcmp(argv[i], "-o:p010") == 0)
             {
-                frmOut = new frame::P010(w, h);
+                fmtOut = FOURCC::P010;
             }
             else if (std::strcmp(argv[i], "-o:y410") == 0)
             {
-                frmOut = new frame::Y410(w, h);
+                fmtOut = FOURCC::Y410;
             }
             else if (std::strcmp(argv[i], "-o:yuv44410p") == 0)
             {
-                frmOut = new frame::YUV44410P(w, h);
+                fmtOut = FOURCC::YUV44410P;
             }
             else if (std::strcmp(argv[i], "-o:yuv4208p") == 0)
             {
-                frmOut = new frame::YUV4208P(w, h);
+                fmtOut = FOURCC::YUV4208P;
+            }
+            else if (std::strcmp(argv[i], "-o:y210") == 0)
+            {
+                fmtOut = FOURCC::Y210;
             }
             fsOut.open(argv[++i], std::ios::out | std::ios::binary);
         }
+        else if (std::strcmp(argv[i], "-p") == 0 ||
+            std::strcmp(argv[i], "--padding") == 0)
+        {
+            padding = strtoull(argv[++i], nullptr, 10);
+        }
     }
+
+    frmIn = frame::CreateFrame(fmtIn, w, h, padding);
+    frmIn->Allocate();
+    frmOut = frame::CreateFrame(fmtOut, w, h, padding);
 
     if (!frmIn || !frmOut || !fsIn || !fsOut)
     {
         return -1;
     }
 
-    auto bufIn = new char[frmIn->FrameSize()];
-    auto bufOut = new char[frmOut->FrameSize()];
+    auto bufIn = new char[frmIn->FrameSize(false)];
+    auto bufOut = new char[frmOut->FrameSize(true)];
 
-    while (fsIn.read(bufIn, frmIn->FrameSize()))
+    while (fsIn.read(bufIn, frmIn->FrameSize(false)))
     {
         frmIn->ReadFrame(bufIn);
-        frmIn->WriteFrame(bufOut, frmOut->Format());
-        fsOut.write(bufOut, frmOut->FrameSize());
+        frmOut->ConvertFrom(*frmIn);
+        frmOut->WriteFrame(bufOut);
+        fsOut.write(bufOut, frmOut->FrameSize(true));
     }
 
     return 0;
