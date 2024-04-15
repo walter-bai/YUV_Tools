@@ -33,3 +33,5 @@
 
 # Mine
 build/
+CMakeSettings.json
+.vs/
