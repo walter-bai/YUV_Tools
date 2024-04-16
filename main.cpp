@@ -1,14 +1,17 @@
 #include <algorithm>
 #include <fstream>
+#include <future>
 #include <iostream>
+#include <thread>
 #include "frame.hpp"
 
+static const size_t coreNum = std::thread::hardware_concurrency();
 static size_t w = 0;
 static size_t h = 0;
 static std::ifstream fsIn;
 static std::ofstream fsOut;
-static frame::Frame* frmIn = nullptr;
-static frame::Frame* frmOut = nullptr;
+static frame::Frame** frmIn = nullptr;
+static frame::Frame** frmOut = nullptr;
 static size_t alignment = 2;
 static bool replicate = false;
 
@@ -16,21 +19,36 @@ int ParseArgs(int argc, char* argv[]);
 
 int main(int argc, char* argv[])
 {
+    frmIn = new frame::Frame * [coreNum] {nullptr};
+    frmOut = new frame::Frame * [coreNum] {nullptr};
+
     if (ParseArgs(argc, argv) != 0)
     {
         return -1;
     }
 
-    frmIn->Allocate();
-    auto bufIn = new char[frmIn->FrameSize(false)];
-    auto bufOut = new char[frmOut->FrameSize(true)];
-
-    while (fsIn.read(bufIn, frmIn->FrameSize(false)))
+    for (size_t i = 0; i < coreNum; i++)
     {
-        frmIn->ReadFrame(bufIn);
-        frmOut->ConvertFrom(*frmIn);
-        frmOut->WriteFrame(bufOut);
-        fsOut.write(bufOut, frmOut->FrameSize(true));
+        frmIn[i]->SetPadding(alignment, replicate);
+        frmOut[i]->SetPadding(alignment, replicate);
+        frmIn[i]->Allocate();
+    }
+
+    const size_t frmSz = frmIn[0]->FrameSize(false);
+    const size_t frmSzPadded = frmIn[0]->FrameSize(true);
+    auto bufIn = new char[frmSz * coreNum];
+    auto bufOut = new char[frmSzPadded * coreNum];
+
+    while (fsIn.read(bufIn, frmSz * coreNum), fsIn.gcount())
+    {
+        size_t frameNum = std::min(fsIn.gcount() / frmSz, coreNum);
+        for (size_t i = 0; i < frameNum; i++)
+        {
+            frmIn[i]->ReadFrame(bufIn + frmSz * i);
+            frmOut[i]->ConvertFrom(*frmIn[i]);
+            frmOut[i]->WriteFrame(bufOut + frmSzPadded * i);
+        }
+        fsOut.write(bufOut, frmSzPadded * frameNum);
     }
 
     return 0;
@@ -54,12 +72,12 @@ static int ParseArgs(int argc, char* argv[])
         }
         else if (std::strncmp(argv[i], "-i:", 2) == 0)
         {
-            ParseFrameType(&frmIn, argv[i] + 3, "Input");
+            ParseFrameType(frmIn, argv[i] + 3, "Input");
             fsIn.open(argv[++i], std::ios::in | std::ios::binary);
         }
         else if (std::strncmp(argv[i], "-o:", 2) == 0)
         {
-            ParseFrameType(&frmOut, argv[i] + 3, "Output");
+            ParseFrameType(frmOut, argv[i] + 3, "Output");
             fsOut.open(argv[++i], std::ios::out | std::ios::binary);
         }
         else if (std::strcmp(argv[i], "-a") == 0 ||
@@ -74,14 +92,12 @@ static int ParseArgs(int argc, char* argv[])
         }
     }
 
-    if (!frmIn || !frmOut || !fsIn || !fsOut)
+    if (!frmIn[0] || !frmOut[0] || !fsIn || !fsOut)
     {
         return -1;
     }
 
     frame::Frame::EnableLog(true);
-    frmIn->SetPadding(alignment, replicate);
-    frmOut->SetPadding(alignment, replicate);
 
     return 0;
 }
@@ -99,7 +115,7 @@ static void ParseFrameType(frame::Frame** frm, const char* type, const char* nam
         return;
     }
 
-#define CHECK_TYPE_AND_CREATE(T) else if (#T == tp) *frm = CREATE_FRAME(T, w, h, name)
+#define CHECK_TYPE_AND_CREATE(T) else if (#T == tp)  for (size_t i = 0; i < coreNum; i++) frm[i] = CREATE_FRAME(T, w, h, name)
 
     CHECK_TYPE_AND_CREATE(NV12);
     CHECK_TYPE_AND_CREATE(P010);
