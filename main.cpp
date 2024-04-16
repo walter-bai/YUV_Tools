@@ -34,21 +34,30 @@ int main(int argc, char* argv[])
         frmIn[i]->Allocate();
     }
 
-    const size_t frmSz = frmIn[0]->FrameSize(false);
-    const size_t frmSzPadded = frmIn[0]->FrameSize(true);
-    auto bufIn = new char[frmSz * coreNum];
-    auto bufOut = new char[frmSzPadded * coreNum];
+    const size_t frmSzIn = frmIn[0]->FrameSize(false);
+    const size_t frmSzOut = frmOut[0]->FrameSize(true);
+    auto bufIn = new char[frmSzIn * coreNum];
+    auto bufOut = new char[frmSzOut * coreNum];
 
-    while (fsIn.read(bufIn, frmSz * coreNum), fsIn.gcount())
+    while (fsIn.read(bufIn, frmSzIn * coreNum), fsIn.gcount())
     {
-        size_t frameNum = std::min(fsIn.gcount() / frmSz, coreNum);
+        size_t frameNum = std::min(fsIn.gcount() / frmSzIn, coreNum);
+        std::vector<std::future<void>> tasks;
         for (size_t i = 0; i < frameNum; i++)
         {
-            frmIn[i]->ReadFrame(bufIn + frmSz * i);
-            frmOut[i]->ConvertFrom(*frmIn[i]);
-            frmOut[i]->WriteFrame(bufOut + frmSzPadded * i);
+            tasks.push_back(std::async(
+                std::launch::async,
+                [=]() {
+                    frmIn[i]->ReadFrame(bufIn + frmSzIn * i);
+                    frmOut[i]->ConvertFrom(*frmIn[i]);
+                    frmOut[i]->WriteFrame(bufOut + frmSzOut * i);
+                }));
         }
-        fsOut.write(bufOut, frmSzPadded * frameNum);
+        for (size_t i = 0; i < frameNum; i++)
+        {
+            tasks[i].wait();
+        }
+        fsOut.write(bufOut, frmSzOut * frameNum);
     }
 
     return 0;
