@@ -89,50 +89,18 @@ static void ParseFrameType(frame::Frame** frm, const char* type, const char* nam
 {
 #define ASSIGN_FRAME(foucc) *frm = CREATE_FRAME(foucc, w, h, name)
 
-    if (std::strcmp(type, "nv12") == 0)
-    {
-        ASSIGN_FRAME(NV12);
-    }
-    else if (std::strcmp(type, "p010") == 0)
-    {
-        ASSIGN_FRAME(P010);
-    }
-    else if (std::strcmp(type, "y410") == 0)
-    {
-        ASSIGN_FRAME(Y410);
-    }
-    else if (std::strcmp(type, "y416") == 0)
-    {
-        ASSIGN_FRAME(Y416);
-    }
-    else if (std::strcmp(type, "ayuv") == 0)
-    {
-        ASSIGN_FRAME(AYUV);
-    }
-    else if (std::strcmp(type, "i420") == 0)
-    {
-        ASSIGN_FRAME(I420);
-    }
-    else if (std::strcmp(type, "y210") == 0)
-    {
-        ASSIGN_FRAME(Y210);
-    }
-    else if (std::strcmp(type, "y216") == 0)
-    {
-        ASSIGN_FRAME(Y216);
-    }
-    else if (std::strcmp(type, "yuy2") == 0)
-    {
-        ASSIGN_FRAME(YUY2);
-    }
-    else if (std::strcmp(type, "yuyv") == 0)
-    {
-        ASSIGN_FRAME(YUYV);
-    }
-    else if (std::strcmp(type, "grey") == 0)
-    {
-        ASSIGN_FRAME(GREY);
-    }
+    if      (std::strcmp(type, "nv12") == 0) ASSIGN_FRAME(NV12);
+    else if (std::strcmp(type, "p010") == 0) ASSIGN_FRAME(P010);
+    else if (std::strcmp(type, "y410") == 0) ASSIGN_FRAME(Y410);
+    else if (std::strcmp(type, "y416") == 0) ASSIGN_FRAME(Y416);
+    else if (std::strcmp(type, "ayuv") == 0) ASSIGN_FRAME(AYUV);
+    else if (std::strcmp(type, "i420") == 0) ASSIGN_FRAME(I420);
+    else if (std::strcmp(type, "y210") == 0) ASSIGN_FRAME(Y210);
+    else if (std::strcmp(type, "y216") == 0) ASSIGN_FRAME(Y216);
+    else if (std::strcmp(type, "yuy2") == 0) ASSIGN_FRAME(YUY2);
+    else if (std::strcmp(type, "yuyv") == 0) ASSIGN_FRAME(YUYV);
+    else if (std::strcmp(type, "grey") == 0) ASSIGN_FRAME(GREY);
+    else     std::cout << "Unsupported format!" << std::endl;
 
 #undef ASSIGN_FRAME
 }
