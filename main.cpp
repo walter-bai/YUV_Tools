@@ -94,20 +94,24 @@ static void ParseFrameType(frame::Frame** frm, const char* type, const char* nam
             return std::toupper(static_cast<unsigned char>(ch));
         });
 
-#define CHECK_TYPE_AND_CREATE(T) (#T == tp) *frm = CREATE_FRAME(T, w, h, name)
+#define CHECK_TYPE_AND_CREATE(T) else if (#T == tp) *frm = CREATE_FRAME(T, w, h, name)
 
-    if      CHECK_TYPE_AND_CREATE(NV12);
-    else if CHECK_TYPE_AND_CREATE(P010);
-    else if CHECK_TYPE_AND_CREATE(Y410);
-    else if CHECK_TYPE_AND_CREATE(Y416);
-    else if CHECK_TYPE_AND_CREATE(AYUV);
-    else if CHECK_TYPE_AND_CREATE(I420);
-    else if CHECK_TYPE_AND_CREATE(Y210);
-    else if CHECK_TYPE_AND_CREATE(Y216);
-    else if CHECK_TYPE_AND_CREATE(YUY2);
-    else if CHECK_TYPE_AND_CREATE(YUYV);
-    else if CHECK_TYPE_AND_CREATE(GREY);
-    else     std::cout << "Unsupported format!" << std::endl;
+    if (tp.empty())
+    {
+        return;
+    }
+
+    CHECK_TYPE_AND_CREATE(NV12);
+    CHECK_TYPE_AND_CREATE(P010);
+    CHECK_TYPE_AND_CREATE(Y410);
+    CHECK_TYPE_AND_CREATE(Y416);
+    CHECK_TYPE_AND_CREATE(AYUV);
+    CHECK_TYPE_AND_CREATE(I420);
+    CHECK_TYPE_AND_CREATE(Y210);
+    CHECK_TYPE_AND_CREATE(Y216);
+    CHECK_TYPE_AND_CREATE(YUY2);
+    CHECK_TYPE_AND_CREATE(YUYV);
+    CHECK_TYPE_AND_CREATE(GREY);
 
 #undef CHECK_TYPE_AND_CREATE
 }
