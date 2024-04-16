@@ -87,48 +87,52 @@ static int ParseArgs(int argc, char* argv[])
 
 static void ParseFrameType(frame::Frame** frm, const char* type, const char* name)
 {
+#define ASSIGN_FRAME(foucc) *frm = CREATE_FRAME(foucc, w, h, name)
+
     if (std::strcmp(type, "nv12") == 0)
     {
-        *frm = CREATE_FRAME(NV12, w, h, name);
+        ASSIGN_FRAME(NV12);
     }
     else if (std::strcmp(type, "p010") == 0)
     {
-        *frm = CREATE_FRAME(P010, w, h, name);
+        ASSIGN_FRAME(P010);
     }
     else if (std::strcmp(type, "y410") == 0)
     {
-        *frm = CREATE_FRAME(Y410, w, h, name);
+        ASSIGN_FRAME(Y410);
     }
     else if (std::strcmp(type, "y416") == 0)
     {
-        *frm = CREATE_FRAME(Y416, w, h, name);
+        ASSIGN_FRAME(Y416);
     }
     else if (std::strcmp(type, "ayuv") == 0)
     {
-        *frm = CREATE_FRAME(AYUV, w, h, name);
+        ASSIGN_FRAME(AYUV);
     }
     else if (std::strcmp(type, "i420") == 0)
     {
-        *frm = CREATE_FRAME(I420, w, h, name);
+        ASSIGN_FRAME(I420);
     }
     else if (std::strcmp(type, "y210") == 0)
     {
-        *frm = CREATE_FRAME(Y210, w, h, name);
+        ASSIGN_FRAME(Y210);
     }
     else if (std::strcmp(type, "y216") == 0)
     {
-        *frm = CREATE_FRAME(Y216, w, h, name);
+        ASSIGN_FRAME(Y216);
     }
     else if (std::strcmp(type, "yuy2") == 0)
     {
-        *frm = CREATE_FRAME(YUY2, w, h, name);
+        ASSIGN_FRAME(YUY2);
     }
     else if (std::strcmp(type, "yuyv") == 0)
     {
-        *frm = CREATE_FRAME(YUYV, w, h, name);
+        ASSIGN_FRAME(YUYV);
     }
     else if (std::strcmp(type, "grey") == 0)
     {
-        *frm = CREATE_FRAME(GREY, w, h, name);
+        ASSIGN_FRAME(GREY);
     }
+
+#undef ASSIGN_FRAME
 }
