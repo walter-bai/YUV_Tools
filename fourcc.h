@@ -13,6 +13,7 @@ enum class FOURCC
     GREY       = MAKEFOURCC('G', 'R', 'E', 'Y'),
     Y8         = MAKEFOURCC('Y', '8', ' ', ' '),
     Y800       = MAKEFOURCC('Y', '8', '0', '0'),
+    I400       = MAKEFOURCC('I', '4', '0', '0'),
 
     // YUV 420
     NV12       = MAKEFOURCC('N', 'V', '1', '2'),

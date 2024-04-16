@@ -543,6 +543,7 @@ namespace frame
     using GREY = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_400, 8>;
     using Y8   = GREY;
     using Y800 = GREY;
+    using I400 = GREY;
     using NV12 = FrameInterleaved<uint8_t, CHROMA_FORMAT::YUV_420, 8>;
     using NV21 = FrameInterleaved<uint8_t, CHROMA_FORMAT::YUV_420, 8, 0, false>;
     using P010 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_420, 10, 6>;
