@@ -8,6 +8,9 @@
 #include "chroma_format.h"
 #include "fourcc.h"
 
+#define CREATE_FRAME(fourcc, width, height, name) \
+  new frame::##fourcc(width, height, name)
+
 #pragma pack(push, 1)
 
 namespace frame
@@ -36,9 +39,15 @@ namespace frame
 
         void SetPadding(size_t align, bool replicate)
         {
-            if (align == 0 || (align & 1) != 0)
+            if (_logEnable)
             {
-                if (align == 0)
+                std::cout << std::endl << "Setting padding for \"" << m_name << "\".." << std::endl;
+                std::cout << "  > Using " << (replicate ? "boundary replication" : "zero") << " padding with " << align << " aligned.." << std::endl;
+            }
+
+            if (align < 2 || (align & 1) != 0)
+            {
+                if (align < 2)
                 {
                     return;
                 }
@@ -53,8 +62,6 @@ namespace frame
 
             if (_logEnable)
             {
-                std::cout << std::endl << "Setting padding for \"" << m_name << "\".." << std::endl;
-                std::cout << "  > Using " << (replicate ? "boundary replication" : "zero") << " padding with " << align << " aligned.." << std::endl;
                 std::cout << "  > Original width is: " << m_w << ", height is: " << m_h << ".." << std::endl;
                 std::cout << "  > Padded   width is: " << m_wPadded << ", height is: " << m_hPadded << "." << std::endl << std::endl;
             }
@@ -678,8 +685,5 @@ namespace frame
         }
     };
 }
-
-#define CREATE_FRAME(fourcc, width, height, name) \
-  new frame::##fourcc(width, height, #name)
 
 #pragma pack(pop)

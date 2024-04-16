@@ -1,7 +1,19 @@
 # YUV_Tools
+This tool converts a YUV from one format to another, even the source and destination format have different bit depth and chroma format. It can also align the width and height with user-specified alignment and padding method.
 
-Convert one YUV format to another
+## Build
+`cd repo`
+`mkdir build && cd build`
+`cmake ..`
 
-yuv_tools -w 1920 -h 1080 -i:y410 D:\yuv\Blender_lossless_y410_1080p60.yuv -o:nv12 \\10.239.141.175\content-share\EncoderContent\Blender_lossless_nv12_1080p60.yuv
+## Options
+- [-w|--width] pixel width of input YUV
+- [-h|--height] pixel height of input YUV
+- [-i:format] format of input YUV
+- [-o:format] format of output YUV
+- [-a|--align] width and height alignment for the output YUV, must be an even number, output YUV will be padded if width or height is not aligned
+- [-r|--replicate] padding method, 0 for zero padding, 1 for boundary replication padding
 
-Add "-p" or "--padding" to make alignment and padding, e.g., "-p 8" will align both width and height to 8, the alignmed pixels will be padded by boundary replication.
+## Example
+The following cmdline converts a Y410 file to an NV12 one without padding:
+`yuv_tools -w 1920 -h 1080 -i:y410 input.y410 -o:nv12 output.nv12`
