@@ -1,13 +1,13 @@
 #include <fstream>
 #include <iostream>
-#include "frame.h"
+#include "frame.hpp"
 
 int main(int argc, char* argv[])
 {
     size_t w = 0;
     size_t h = 0;
-    FOURCC fmtIn = FOURCC::UNDEF;
-    FOURCC fmtOut = FOURCC::UNDEF;
+    FOURCC fmtIn = FOURCC::UNKNOWN;
+    FOURCC fmtOut = FOURCC::UNKNOWN;
     std::ifstream fsIn;
     std::ofstream fsOut;
     frame::Frame* frmIn = nullptr;
@@ -38,13 +38,10 @@ int main(int argc, char* argv[])
             {
                 fmtIn = FOURCC::Y410;
             }
-            else if (std::strcmp(argv[i], "-i:yuv44410p") == 0)
+
+            else if (std::strcmp(argv[i], "-i:i420") == 0)
             {
-                fmtIn = FOURCC::YUV44410P;
-            }
-            else if (std::strcmp(argv[i], "-i:yuv4208p") == 0)
-            {
-                fmtIn = FOURCC::YUV4208P;
+                fmtIn = FOURCC::I420;
             }
             else if (std::strcmp(argv[i], "-i:y210") == 0)
             {
@@ -66,13 +63,9 @@ int main(int argc, char* argv[])
             {
                 fmtOut = FOURCC::Y410;
             }
-            else if (std::strcmp(argv[i], "-o:yuv44410p") == 0)
+            else if (std::strcmp(argv[i], "-o:i420") == 0)
             {
-                fmtOut = FOURCC::YUV44410P;
-            }
-            else if (std::strcmp(argv[i], "-o:yuv4208p") == 0)
-            {
-                fmtOut = FOURCC::YUV4208P;
+                fmtOut = FOURCC::I420;
             }
             else if (std::strcmp(argv[i], "-o:y210") == 0)
             {

@@ -1,28 +1,11 @@
 #pragma once
 
-#include <iostream>
 #include <cstdint>
-#include <vector>
 #include <exception>
-
-enum class CHROMA_IDC
-{
-    IDC_400,
-    IDC_420,
-    IDC_422,
-    IDC_444,
-};
-
-enum class FOURCC
-{
-    UNDEF,
-    NV12,
-    P010,
-    Y410,
-    YUV44410P,
-    YUV4208P,
-    Y210,
-};
+#include <iostream>
+#include <vector>
+#include "fourcc.h"
+#include "chroma_format.h"
 
 #pragma pack(push, 1)
 
@@ -57,7 +40,7 @@ namespace frame
             std::cout << "Padded width is: " << m_wPadded << ", height is: " << m_hPadded << std::endl;
         }
 
-        void ConvertFrom(const Frame &frame)
+        void ConvertFrom(const Frame& frame)
         {
             if (m_w != frame.m_w || m_wPadded != frame.m_wPadded ||
                 m_h != frame.m_h || m_hPadded != frame.m_hPadded)
@@ -68,8 +51,8 @@ namespace frame
 
             auto depthSrc = frame.GetBitDepth();
             auto depthTarget = GetBitDepth();
-            auto chromaIDCSrc = frame.GetChromaIDC();
-            auto chromaIDCTarget = GetChromaIDC();
+            auto chromaFmtSrc = frame.GetChromaFmt();
+            auto chromaFmtTarget = GetChromaFmt();
 
             if (HasAChannel())
             {
@@ -103,11 +86,11 @@ namespace frame
             auto heightChromaPadded = HeightChroma(true);
             m_raw.U.resize(pixelChroma / 2, 0);
             m_raw.V.resize(pixelChroma / 2, 0);
-            if (chromaIDCSrc == CHROMA_IDC::IDC_400 || chromaIDCTarget == CHROMA_IDC::IDC_400)
+            if (chromaFmtSrc == CHROMA_FORMAT::YUV_400 || chromaFmtTarget == CHROMA_FORMAT::YUV_400)
             {
                 return;
             }
-            else if (chromaIDCSrc == chromaIDCTarget)
+            else if (chromaFmtSrc == chromaFmtTarget)
             {
                 for (size_t i = 0; i < m_raw.U.size(); i++)
                 {
@@ -115,7 +98,7 @@ namespace frame
                     m_raw.V[i] = GET_SRC_PIXEL(V, i);
                 }
             }
-            else if (chromaIDCSrc == CHROMA_IDC::IDC_420 && chromaIDCTarget == CHROMA_IDC::IDC_422)
+            else if (chromaFmtSrc == CHROMA_FORMAT::YUV_420 && chromaFmtTarget == CHROMA_FORMAT::YUV_422)
             {
                 for (size_t h = 0; h < heightChromaPadded / 2; h++)
                 {
@@ -130,7 +113,7 @@ namespace frame
                     }
                 }
             }
-            else if (chromaIDCSrc == CHROMA_IDC::IDC_420 && chromaIDCTarget == CHROMA_IDC::IDC_444)
+            else if (chromaFmtSrc == CHROMA_FORMAT::YUV_420 && chromaFmtTarget == CHROMA_FORMAT::YUV_444)
             {
                 for (size_t h = 0; h < heightChromaPadded / 2; h++)
                 {
@@ -149,7 +132,7 @@ namespace frame
                     }
                 }
             }
-            else if (chromaIDCSrc == CHROMA_IDC::IDC_422 && chromaIDCTarget == CHROMA_IDC::IDC_444)
+            else if (chromaFmtSrc == CHROMA_FORMAT::YUV_422 && chromaFmtTarget == CHROMA_FORMAT::YUV_444)
             {
                 for (size_t h = 0; h < heightChromaPadded; h++)
                 {
@@ -164,7 +147,7 @@ namespace frame
                     }
                 }
             }
-            else if (chromaIDCSrc == CHROMA_IDC::IDC_422 && chromaIDCTarget == CHROMA_IDC::IDC_420)
+            else if (chromaFmtSrc == CHROMA_FORMAT::YUV_422 && chromaFmtTarget == CHROMA_FORMAT::YUV_420)
             {
                 for (size_t h = 0; h < heightChromaPadded * 2; h += 2)
                 {
@@ -178,7 +161,7 @@ namespace frame
                     }
                 }
             }
-            else if (chromaIDCSrc == CHROMA_IDC::IDC_444 && chromaIDCTarget == CHROMA_IDC::IDC_422)
+            else if (chromaFmtSrc == CHROMA_FORMAT::YUV_444 && chromaFmtTarget == CHROMA_FORMAT::YUV_422)
             {
                 for (size_t h = 0; h < heightChromaPadded; h++)
                 {
@@ -186,13 +169,13 @@ namespace frame
                     {
                         auto iSrc0 = h * widthChromaPadded * 2 + w;
                         auto iSrc1 = h * widthChromaPadded * 2 + w + 1;
-                        auto iDst =  h * widthChromaPadded + w / 2;
+                        auto iDst = h * widthChromaPadded + w / 2;
                         m_raw.U[iDst] = (GET_SRC_PIXEL(U, iSrc0) + GET_SRC_PIXEL(U, iSrc1)) / 2;
                         m_raw.V[iDst] = (GET_SRC_PIXEL(V, iSrc0) + GET_SRC_PIXEL(V, iSrc1)) / 2;
                     }
                 }
             }
-            else  // chromaIDCSrc == CHROMA_IDC::IDC_444 && chromaIDCTarget == CHROMA_IDC::IDC_420
+            else  // chromaFmtSrc == CHROMA_FORMAT::YUV_444 && chromaFmtTarget == CHROMA_FORMAT::YUV_420
             {
                 for (size_t h = 0; h < heightChromaPadded * 2; h += 2)
                 {
@@ -229,7 +212,7 @@ namespace frame
 
         virtual ~Frame() = default;
         virtual size_t FrameSize(bool padded) const = 0;
-        virtual CHROMA_IDC GetChromaIDC() const = 0;
+        virtual CHROMA_FORMAT GetChromaFmt() const = 0;
         virtual uint8_t GetBitDepth() const = 0;
         virtual bool HasAChannel() const = 0;
         virtual void ReadFrame(const void* data) = 0;
@@ -249,18 +232,18 @@ namespace frame
             size_t pixelLuma = PixelLuma(padded);
             size_t pixelChroma;
 
-            switch (GetChromaIDC())
+            switch (GetChromaFmt())
             {
-            case CHROMA_IDC::IDC_420:
+            case CHROMA_FORMAT::YUV_420:
                 pixelChroma = pixelLuma / 2;
                 break;
-            case CHROMA_IDC::IDC_422:
+            case CHROMA_FORMAT::YUV_422:
                 pixelChroma = pixelLuma;
                 break;
-            case CHROMA_IDC::IDC_444:
+            case CHROMA_FORMAT::YUV_444:
                 pixelChroma = pixelLuma * 2;
                 break;
-            case CHROMA_IDC::IDC_400:
+            case CHROMA_FORMAT::YUV_400:
             default:
                 pixelChroma = 0;
                 break;
@@ -274,16 +257,16 @@ namespace frame
             size_t widthLuma = padded ? m_wPadded : m_w;
             size_t widthChroma;
 
-            switch (GetChromaIDC())
+            switch (GetChromaFmt())
             {
-            case CHROMA_IDC::IDC_420:
-            case CHROMA_IDC::IDC_422:
+            case CHROMA_FORMAT::YUV_420:
+            case CHROMA_FORMAT::YUV_422:
                 widthChroma = widthLuma / 2;
                 break;
-            case CHROMA_IDC::IDC_444:
+            case CHROMA_FORMAT::YUV_444:
                 widthChroma = widthLuma;
                 break;
-            case CHROMA_IDC::IDC_400:
+            case CHROMA_FORMAT::YUV_400:
             default:
                 widthChroma = 0;
                 break;
@@ -297,16 +280,16 @@ namespace frame
             size_t heightLuma = padded ? m_hPadded : m_h;
             size_t heightChroma;
 
-            switch (GetChromaIDC())
+            switch (GetChromaFmt())
             {
-            case CHROMA_IDC::IDC_420:
+            case CHROMA_FORMAT::YUV_420:
                 heightChroma = heightLuma / 2;
                 break;
-            case CHROMA_IDC::IDC_422:
-            case CHROMA_IDC::IDC_444:
+            case CHROMA_FORMAT::YUV_422:
+            case CHROMA_FORMAT::YUV_444:
                 heightChroma = heightLuma;
                 break;
-            case CHROMA_IDC::IDC_400:
+            case CHROMA_FORMAT::YUV_400:
             default:
                 heightChroma = 0;
                 break;
@@ -381,7 +364,7 @@ namespace frame
         Raw m_raw;
     };
 
-    template <typename pixel_t, CHROMA_IDC IDC, uint8_t DEPTH>
+    template <typename pixel_t, CHROMA_FORMAT FMT, uint8_t DEPTH>
     class FrameNonPacked : public Frame
     {
     public:
@@ -392,9 +375,9 @@ namespace frame
             return (PixelLuma(padded) + PixelChroma(padded)) * sizeof(pixel_t);
         }
 
-        CHROMA_IDC GetChromaIDC() const override
+        CHROMA_FORMAT GetChromaFmt() const override
         {
-            return IDC;
+            return FMT;
         }
 
         uint8_t GetBitDepth() const override
@@ -408,8 +391,8 @@ namespace frame
         }
     };
 
-    template <typename pixel_t, CHROMA_IDC IDC, uint8_t DEPTH, uint8_t SHIFT = 0>
-    class FramePlanar : public FrameNonPacked<pixel_t, IDC, DEPTH>
+    template <typename pixel_t, CHROMA_FORMAT FMT, uint8_t DEPTH, uint8_t SHIFT = 0>
+    class FramePlanar : public FrameNonPacked<pixel_t, FMT, DEPTH>
     {
     public:
         FramePlanar(size_t w, size_t h, size_t padding = 0) : FrameNonPacked(w, h, padding) {}
@@ -464,8 +447,8 @@ namespace frame
         }
     };
 
-    template <typename pixel_t, CHROMA_IDC IDC, uint8_t DEPTH, uint8_t SHIFT = 0>
-    class FrameInterleaved : public FrameNonPacked<pixel_t, IDC, DEPTH>
+    template <typename pixel_t, CHROMA_FORMAT FMT, uint8_t DEPTH, uint8_t SHIFT = 0>
+    class FrameInterleaved : public FrameNonPacked<pixel_t, FMT, DEPTH>
     {
     public:
         FrameInterleaved(size_t w, size_t h, size_t padding = 0) : FrameNonPacked(w, h, padding) {}
@@ -518,10 +501,10 @@ namespace frame
         }
     };
 
-    using NV12 = FrameInterleaved<uint8_t, CHROMA_IDC::IDC_420, 8>;
-    using P010 = FrameInterleaved<uint16_t, CHROMA_IDC::IDC_420, 10, 6>;
-    using YUV4208P = FramePlanar<uint8_t, CHROMA_IDC::IDC_420, 8>;
-    using YUV44410P = FramePlanar<uint16_t, CHROMA_IDC::IDC_444, 10>;
+    using NV12 = FrameInterleaved<uint8_t, CHROMA_FORMAT::YUV_420, 8>;
+    using P010 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_420, 10, 6>;
+    using I420 = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_420, 8>;
+    using IYUV = I420;
 
     class Y410 : public Frame
     {
@@ -542,9 +525,9 @@ namespace frame
             return (padded ? m_wPadded * m_hPadded : m_w * m_h) * sizeof(Pixel);
         }
 
-        CHROMA_IDC GetChromaIDC() const override
+        CHROMA_FORMAT GetChromaFmt() const override
         {
-            return CHROMA_IDC::IDC_444;
+            return CHROMA_FORMAT::YUV_444;
         }
 
         uint8_t GetBitDepth() const override
@@ -606,9 +589,9 @@ namespace frame
             return (padded ? m_wPadded * m_hPadded : m_w * m_h) * sizeof(Pixel);
         }
 
-        CHROMA_IDC GetChromaIDC() const override
+        CHROMA_FORMAT GetChromaFmt() const override
         {
-            return CHROMA_IDC::IDC_422;
+            return CHROMA_FORMAT::YUV_422;
         }
 
         uint8_t GetBitDepth() const override
@@ -673,13 +656,11 @@ namespace frame
             return new P010(w, h, padding);
         case FOURCC::Y410:
             return new Y410(w, h, padding);
-        case FOURCC::YUV44410P:
-            return new YUV44410P(w, h, padding);
-        case FOURCC::YUV4208P:
-            return new YUV4208P(w, h, padding);
+        case FOURCC::I420:
+            return new I420(w, h, padding);
         case FOURCC::Y210:
             return new Y210(w, h, padding);
-        case FOURCC::UNDEF:
+        case FOURCC::UNKNOWN:
         default:
             return nullptr;
         }
