@@ -550,6 +550,10 @@ namespace frame
     using P012 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_420, 12>;
     using P016 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_420, 16>;
     using I420 = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_420, 8>;
+    using I422 = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_422, 8>;
+    using NV16 = FrameInterleaved<uint8_t, CHROMA_FORMAT::YUV_422, 8>;
+    using P210 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_422, 10>;
+    using P216 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_422, 16>;
     using IYUV = I420;
 
     template <typename pixel_t, uint8_t DEPTH>
