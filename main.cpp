@@ -94,12 +94,12 @@ static void ParseFrameType(frame::Frame** frm, const char* type, const char* nam
             return std::toupper(static_cast<unsigned char>(ch));
         });
 
-#define CHECK_TYPE_AND_CREATE(T) else if (#T == tp) *frm = CREATE_FRAME(T, w, h, name)
-
     if (tp.empty())
     {
         return;
     }
+
+#define CHECK_TYPE_AND_CREATE(T) else if (#T == tp) *frm = CREATE_FRAME(T, w, h, name)
 
     CHECK_TYPE_AND_CREATE(NV12);
     CHECK_TYPE_AND_CREATE(P010);
