@@ -547,6 +547,8 @@ namespace frame
     using NV12 = FrameInterleaved<uint8_t, CHROMA_FORMAT::YUV_420, 8>;
     using NV21 = FrameInterleaved<uint8_t, CHROMA_FORMAT::YUV_420, 8, 0, false>;
     using P010 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_420, 10, 6>;
+    using P012 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_420, 12>;
+    using P016 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_420, 16>;
     using I420 = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_420, 8>;
     using IYUV = I420;
 

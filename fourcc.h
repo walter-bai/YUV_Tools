@@ -19,6 +19,7 @@ enum class FOURCC
     NV12       = MAKEFOURCC('N', 'V', '1', '2'),
     I420       = MAKEFOURCC('I', '4', '2', '0'),
     P010       = MAKEFOURCC('P', '0', '1', '0'),
+    P012       = MAKEFOURCC('P', '0', '1', '2'),
     P016       = MAKEFOURCC('P', '0', '1', '6'),
     NV21       = MAKEFOURCC('N', 'V', '2', '1'),
     IYUV       = MAKEFOURCC('I', 'Y', 'U', 'V'),
