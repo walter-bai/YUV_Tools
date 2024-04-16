@@ -544,6 +544,7 @@ namespace frame
     using P010 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_420, 10, 6>;
     using I420 = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_420, 8>;
     using IYUV = I420;
+    using GREY = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_400, 8>;
 
     class Y410 : public Frame
     {

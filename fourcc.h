@@ -1,13 +1,21 @@
+// Reference:
+// https://github.com/intel/vpl-gpu-rt/blob/main/api/vpl/mfxstructures.h
+// https://fourcc.org/yuv.php
+
 #define MAKEFOURCC(A, B, C, D) \
   ((((int)A)) + (((int)B) << 8) + (((int)C) << 16) + (((int)D) << 24))
 
 enum class FOURCC
 {
 	UNKNOWN    = 0,
+	GREY       = 0x59455247,
+	Y8         = 0x20203859,
+	Y800       = 0x30303859,
 	NV12       = MAKEFOURCC('N', 'V', '1', '2'),
 	YV12       = MAKEFOURCC('Y', 'V', '1', '2'),
 	NV16       = MAKEFOURCC('N', 'V', '1', '6'),
 	YUY2       = MAKEFOURCC('Y', 'U', 'Y', '2'),
+	YUYV       = 0x56595559,
 	RGB565     = MAKEFOURCC('R', 'G', 'B', '2'),
 	RGBP       = MAKEFOURCC('R', 'G', 'B', 'P'),
 	RGB4       = MAKEFOURCC('R', 'G', 'B', '4'),

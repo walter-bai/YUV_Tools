@@ -107,4 +107,8 @@ static void ParseFrameType(frame::Frame** frm, const char* type, const char* nam
     {
         *frm = CREATE_FRAME(Y210, w, h, name);
     }
+    else if (std::strcmp(type, "grey") == 0)
+    {
+        *frm = CREATE_FRAME(GREY, w, h, name);
+    }
 }
