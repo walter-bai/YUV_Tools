@@ -546,23 +546,15 @@ namespace frame
     using IYUV = I420;
     using GREY = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_400, 8>;
 
-    class Y410 : public Frame
+    template <typename pixel_t, uint8_t DEPTH>
+    class Packed444A : public Frame
     {
     public:
-        struct Pixel
-        {
-            uint32_t U : 10;
-            uint32_t Y : 10;
-            uint32_t V : 10;
-            uint32_t A : 2;
-        };
-
-    public:
-        Y410(size_t w, size_t h, const std::string &name = "") : Frame(w, h, name) {}
+        Packed444A(size_t w, size_t h, const std::string &name = "") : Frame(w, h, name) {}
 
         size_t FrameSize(bool padded) const override
         {
-            return (padded ? m_wPadded * m_hPadded : m_w * m_h) * sizeof(Pixel);
+            return (padded ? m_wPadded * m_hPadded : m_w * m_h) * sizeof(pixel_t);
         }
 
         CHROMA_FORMAT GetChromaFmt() const override
@@ -572,7 +564,7 @@ namespace frame
 
         uint8_t GetBitDepth() const override
         {
-            return 10;
+            return DEPTH;
         }
 
         bool HasAChannel() const override
@@ -582,7 +574,7 @@ namespace frame
 
         void ReadFrame(const void* data) override
         {
-            auto p = reinterpret_cast<const Pixel*>(data);
+            auto p = reinterpret_cast<const pixel_t*>(data);
             size_t skipped = 0;
             for (size_t i = 0; i < m_w * m_h; ++i)
             {
@@ -601,7 +593,7 @@ namespace frame
 
         void WriteFrame(void* data) const override
         {
-            auto p = reinterpret_cast<Pixel*>(data);
+            auto p = reinterpret_cast<pixel_t*>(data);
             for (size_t i = 0; i < m_raw.A.size(); ++i)
             {
                 p[i].A = m_raw.A[i];
@@ -611,6 +603,33 @@ namespace frame
             }
         }
     };
+
+    struct PixelY410
+    {
+        uint32_t U : 10;
+        uint32_t Y : 10;
+        uint32_t V : 10;
+        uint32_t A : 2;
+    };
+    using Y410 = Packed444A<PixelY410, 10>;
+
+    struct PixelY416
+    {
+        uint64_t U : 16;
+        uint64_t Y : 16;
+        uint64_t V : 16;
+        uint64_t A : 16;
+    };
+    using Y416 = Packed444A<PixelY416, 16>;
+
+    struct PixelAYUV
+    {
+        uint32_t V : 8;
+        uint32_t U : 8;
+        uint32_t Y : 8;
+        uint32_t A : 8;
+    };
+    using AYUV = Packed444A<PixelAYUV, 8>;
 
     template <typename pixel_t, uint8_t DEPTH, uint8_t SHIFT = 0>
     class Y210_Y216_YUY2 : public Frame

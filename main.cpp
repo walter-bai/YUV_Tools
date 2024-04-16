@@ -99,6 +99,14 @@ static void ParseFrameType(frame::Frame** frm, const char* type, const char* nam
     {
         *frm = CREATE_FRAME(Y410, w, h, name);
     }
+    else if (std::strcmp(type, "y416") == 0)
+    {
+        *frm = CREATE_FRAME(Y416, w, h, name);
+    }
+    else if (std::strcmp(type, "ayuv") == 0)
+    {
+        *frm = CREATE_FRAME(AYUV, w, h, name);
+    }
     else if (std::strcmp(type, "i420") == 0)
     {
         *frm = CREATE_FRAME(I420, w, h, name);
