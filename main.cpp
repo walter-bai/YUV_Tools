@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include "frame.hpp"
@@ -87,20 +88,26 @@ static int ParseArgs(int argc, char* argv[])
 
 static void ParseFrameType(frame::Frame** frm, const char* type, const char* name)
 {
-#define ASSIGN_FRAME(foucc) *frm = CREATE_FRAME(foucc, w, h, name)
+    std::string tp(type);
+    std::transform(tp.begin(), tp.end(), tp.begin(), [](char ch)
+        {
+            return std::toupper(static_cast<unsigned char>(ch));
+        });
 
-    if      (std::strcmp(type, "nv12") == 0) ASSIGN_FRAME(NV12);
-    else if (std::strcmp(type, "p010") == 0) ASSIGN_FRAME(P010);
-    else if (std::strcmp(type, "y410") == 0) ASSIGN_FRAME(Y410);
-    else if (std::strcmp(type, "y416") == 0) ASSIGN_FRAME(Y416);
-    else if (std::strcmp(type, "ayuv") == 0) ASSIGN_FRAME(AYUV);
-    else if (std::strcmp(type, "i420") == 0) ASSIGN_FRAME(I420);
-    else if (std::strcmp(type, "y210") == 0) ASSIGN_FRAME(Y210);
-    else if (std::strcmp(type, "y216") == 0) ASSIGN_FRAME(Y216);
-    else if (std::strcmp(type, "yuy2") == 0) ASSIGN_FRAME(YUY2);
-    else if (std::strcmp(type, "yuyv") == 0) ASSIGN_FRAME(YUYV);
-    else if (std::strcmp(type, "grey") == 0) ASSIGN_FRAME(GREY);
+#define CHECK_TYPE_AND_CREATE(T) (#T == tp) *frm = CREATE_FRAME(T, w, h, name)
+
+    if      CHECK_TYPE_AND_CREATE(NV12);
+    else if CHECK_TYPE_AND_CREATE(P010);
+    else if CHECK_TYPE_AND_CREATE(Y410);
+    else if CHECK_TYPE_AND_CREATE(Y416);
+    else if CHECK_TYPE_AND_CREATE(AYUV);
+    else if CHECK_TYPE_AND_CREATE(I420);
+    else if CHECK_TYPE_AND_CREATE(Y210);
+    else if CHECK_TYPE_AND_CREATE(Y216);
+    else if CHECK_TYPE_AND_CREATE(YUY2);
+    else if CHECK_TYPE_AND_CREATE(YUYV);
+    else if CHECK_TYPE_AND_CREATE(GREY);
     else     std::cout << "Unsupported format!" << std::endl;
 
-#undef ASSIGN_FRAME
+#undef CHECK_TYPE_AND_CREATE
 }
