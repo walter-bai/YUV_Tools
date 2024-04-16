@@ -126,6 +126,9 @@ static void ParseFrameType(frame::Frame** frm, const char* type, const char* nam
 
 #define CHECK_TYPE_AND_CREATE(T) else if (#T == tp)  for (size_t i = 0; i < coreNum; i++) frm[i] = CREATE_FRAME(T, w, h, name)
 
+    CHECK_TYPE_AND_CREATE(GREY);
+    CHECK_TYPE_AND_CREATE(Y8);
+    CHECK_TYPE_AND_CREATE(Y800);
     CHECK_TYPE_AND_CREATE(NV12);
     CHECK_TYPE_AND_CREATE(P010);
     CHECK_TYPE_AND_CREATE(Y410);
@@ -136,7 +139,6 @@ static void ParseFrameType(frame::Frame** frm, const char* type, const char* nam
     CHECK_TYPE_AND_CREATE(Y216);
     CHECK_TYPE_AND_CREATE(YUY2);
     CHECK_TYPE_AND_CREATE(YUYV);
-    CHECK_TYPE_AND_CREATE(GREY);
 
 #undef CHECK_TYPE_AND_CREATE
 }

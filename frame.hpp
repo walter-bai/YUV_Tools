@@ -540,11 +540,13 @@ namespace frame
         }
     };
 
+    using GREY = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_400, 8>;
+    using Y8   = GREY;
+    using Y800 = GREY;
     using NV12 = FrameInterleaved<uint8_t, CHROMA_FORMAT::YUV_420, 8>;
     using P010 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_420, 10, 6>;
     using I420 = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_420, 8>;
     using IYUV = I420;
-    using GREY = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_400, 8>;
 
     template <typename pixel_t, uint8_t DEPTH>
     class Packed444A : public Frame
