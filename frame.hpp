@@ -3,41 +3,61 @@
 #include <cstdint>
 #include <exception>
 #include <iostream>
+#include <string>
 #include <vector>
-#include "fourcc.h"
 #include "chroma_format.h"
+#include "fourcc.h"
 
 #pragma pack(push, 1)
 
 namespace frame
 {
-    struct Raw
-    {
-        using value_t = uint16_t;
-
-        std::vector<value_t> A;
-        std::vector<value_t> Y;
-        std::vector<value_t> U;
-        std::vector<value_t> V;
-    };
-
     class Frame
     {
-    public:
-        Frame(size_t w, size_t h, size_t padding = 0) : m_w(w), m_h(h)
+    protected:
+        struct Raw
         {
-            if (padding)
+            using value_t = uint16_t;
+
+            std::vector<value_t> A;
+            std::vector<value_t> Y;
+            std::vector<value_t> U;
+            std::vector<value_t> V;
+        };
+
+    public:
+        static void EnableLog(bool en)
+        {
+            _logEnable = en;
+        }
+
+    public:
+        Frame(size_t w, size_t h, const std::string &name = "") : m_w(w), m_h(h), m_wPadded(w), m_hPadded(h), m_name(name) {}
+
+        void SetPadding(size_t align, bool replicate)
+        {
+            if (align == 0 || (align & 1) != 0)
             {
-                m_wPadded = (m_w + padding - 1) / padding * padding;
-                m_hPadded = (m_h + padding - 1) / padding * padding;
-            }
-            else
-            {
-                m_wPadded = m_w;
-                m_hPadded = m_h;
+                if (align == 0)
+                {
+                    return;
+                }
+
+                std::exception e("The alignment used for padding must be an even number!");
+                throw e;
             }
 
-            std::cout << "Padded width is: " << m_wPadded << ", height is: " << m_hPadded << std::endl;
+            m_replic = replicate;
+            m_wPadded = (m_w + align - 1) / align * align;
+            m_hPadded = (m_h + align - 1) / align * align;
+
+            if (_logEnable)
+            {
+                std::cout << std::endl << "Setting padding for \"" << m_name << "\".." << std::endl;
+                std::cout << "  > Using " << (replicate ? "boundary replication" : "zero") << " padding with " << align << " aligned.." << std::endl;
+                std::cout << "  > Original width is: " << m_w << ", height is: " << m_h << ".." << std::endl;
+                std::cout << "  > Padded   width is: " << m_wPadded << ", height is: " << m_hPadded << "." << std::endl << std::endl;
+            }
         }
 
         void ConvertFrom(const Frame& frame)
@@ -300,6 +320,11 @@ namespace frame
 
         void ReplicateBoundary()
         {
+            if (!m_replic)
+            {
+                return;
+            }
+
             if (HasAChannel())
             {
                 for (size_t h = 0; h < m_h; h++)
@@ -361,14 +386,21 @@ namespace frame
         size_t m_wPadded = 0;
         size_t m_h = 0;
         size_t m_hPadded = 0;
+        bool m_replic = false;
         Raw m_raw;
+
+        // logging
+        std::string m_name;
+        static bool _logEnable;
     };
+
+    bool Frame::_logEnable = false;
 
     template <typename pixel_t, CHROMA_FORMAT FMT, uint8_t DEPTH>
     class FrameNonPacked : public Frame
     {
     public:
-        FrameNonPacked(size_t w, size_t h, size_t padding = 0) : Frame(w, h, padding) {}
+        FrameNonPacked(size_t w, size_t h, const std::string& name = "") : Frame(w, h, name) {}
 
         size_t FrameSize(bool padded) const override
         {
@@ -395,7 +427,7 @@ namespace frame
     class FramePlanar : public FrameNonPacked<pixel_t, FMT, DEPTH>
     {
     public:
-        FramePlanar(size_t w, size_t h, size_t padding = 0) : FrameNonPacked(w, h, padding) {}
+        FramePlanar(size_t w, size_t h, const std::string& name = "") : FrameNonPacked(w, h, name) {}
 
         void ReadFrame(const void* data) override
         {
@@ -451,7 +483,7 @@ namespace frame
     class FrameInterleaved : public FrameNonPacked<pixel_t, FMT, DEPTH>
     {
     public:
-        FrameInterleaved(size_t w, size_t h, size_t padding = 0) : FrameNonPacked(w, h, padding) {}
+        FrameInterleaved(size_t w, size_t h, const std::string& name = "") : FrameNonPacked(w, h, name) {}
 
         void ReadFrame(const void* data) override
         {
@@ -518,7 +550,7 @@ namespace frame
         };
 
     public:
-        Y410(size_t w, size_t h, size_t padding = 0) : Frame(w, h, padding) {}
+        Y410(size_t w, size_t h, const std::string &name = "") : Frame(w, h, name) {}
 
         size_t FrameSize(bool padded) const override
         {
@@ -582,7 +614,7 @@ namespace frame
         };
 
     public:
-        Y210(size_t w, size_t h, size_t padding = 0) : Frame(w, h, padding) {}
+        Y210(size_t w, size_t h, const std::string& name = "") : Frame(w, h, name) {}
 
         size_t FrameSize(bool padded) const override
         {
@@ -645,26 +677,9 @@ namespace frame
             }
         }
     };
-
-    Frame* CreateFrame(FOURCC fourcc, size_t w, size_t h, size_t padding)
-    {
-        switch (fourcc)
-        {
-        case FOURCC::NV12:
-            return new NV12(w, h, padding);
-        case FOURCC::P010:
-            return new P010(w, h, padding);
-        case FOURCC::Y410:
-            return new Y410(w, h, padding);
-        case FOURCC::I420:
-            return new I420(w, h, padding);
-        case FOURCC::Y210:
-            return new Y210(w, h, padding);
-        case FOURCC::UNKNOWN:
-        default:
-            return nullptr;
-        }
-    }
 }
+
+#define CREATE_FRAME(fourcc, width, height, name) \
+  new frame::##fourcc(width, height, #name)
 
 #pragma pack(pop)

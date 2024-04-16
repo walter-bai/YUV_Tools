@@ -6,8 +6,6 @@ int main(int argc, char* argv[])
 {
     size_t w = 0;
     size_t h = 0;
-    FOURCC fmtIn = FOURCC::UNKNOWN;
-    FOURCC fmtOut = FOURCC::UNKNOWN;
     std::ifstream fsIn;
     std::ofstream fsOut;
     frame::Frame* frmIn = nullptr;
@@ -28,24 +26,23 @@ int main(int argc, char* argv[])
         {
             if (std::strcmp(argv[i], "-i:nv12") == 0)
             {
-                fmtIn = FOURCC::NV12;
+                frmIn = CREATE_FRAME(NV12, w, h, Input);
             }
             else if (std::strcmp(argv[i], "-i:p010") == 0)
             {
-                fmtIn = FOURCC::P010;
+                frmIn = CREATE_FRAME(P010, w, h, Input);
             }
             else if (std::strcmp(argv[i], "-i:y410") == 0)
             {
-                fmtIn = FOURCC::Y410;
+                frmIn = CREATE_FRAME(Y410, w, h, Input);
             }
-
             else if (std::strcmp(argv[i], "-i:i420") == 0)
             {
-                fmtIn = FOURCC::I420;
+                frmIn = CREATE_FRAME(I420, w, h, Input);
             }
             else if (std::strcmp(argv[i], "-i:y210") == 0)
             {
-                fmtIn = FOURCC::Y210;
+                frmIn = CREATE_FRAME(Y210, w, h, Input);
             }
             fsIn.open(argv[++i], std::ios::in | std::ios::binary);
         }
@@ -53,23 +50,23 @@ int main(int argc, char* argv[])
         {
             if (std::strcmp(argv[i], "-o:nv12") == 0)
             {
-                fmtOut = FOURCC::NV12;
+                frmOut = CREATE_FRAME(NV12, w, h, Output);
             }
             else if (std::strcmp(argv[i], "-o:p010") == 0)
             {
-                fmtOut = FOURCC::P010;
+                frmOut = CREATE_FRAME(P010, w, h, Output);
             }
             else if (std::strcmp(argv[i], "-o:y410") == 0)
             {
-                fmtOut = FOURCC::Y410;
+                frmOut = CREATE_FRAME(Y410, w, h, Output);
             }
             else if (std::strcmp(argv[i], "-o:i420") == 0)
             {
-                fmtOut = FOURCC::I420;
+                frmOut = CREATE_FRAME(I420, w, h, Output);
             }
             else if (std::strcmp(argv[i], "-o:y210") == 0)
             {
-                fmtOut = FOURCC::Y210;
+                frmOut = CREATE_FRAME(Y210, w, h, Output);
             }
             fsOut.open(argv[++i], std::ios::out | std::ios::binary);
         }
@@ -80,9 +77,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    frmIn = frame::CreateFrame(fmtIn, w, h, padding);
     frmIn->Allocate();
-    frmOut = frame::CreateFrame(fmtOut, w, h, padding);
 
     if (!frmIn || !frmOut || !fsIn || !fsOut)
     {
