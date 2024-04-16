@@ -16,7 +16,6 @@ enum class FOURCC
 
     // YUV 420
     NV12       = MAKEFOURCC('N', 'V', '1', '2'),
-    NV16       = MAKEFOURCC('N', 'V', '1', '6'),
     I420       = MAKEFOURCC('I', '4', '2', '0'),
     P010       = MAKEFOURCC('P', '0', '1', '0'),
     P016       = MAKEFOURCC('P', '0', '1', '6'),
@@ -34,6 +33,7 @@ enum class FOURCC
     UYVY       = MAKEFOURCC('U', 'Y', 'V', 'Y'),
     Y216       = MAKEFOURCC('Y', '2', '1', '6'),
     I210       = MAKEFOURCC('I', '2', '1', '0'),
+    NV16       = MAKEFOURCC('N', 'V', '1', '6'),
 
     // YUV 444
     AYUV       = MAKEFOURCC('A', 'Y', 'U', 'V'),
