@@ -486,7 +486,7 @@ namespace frame
         }
     };
 
-    template <typename pixel_t, CHROMA_FORMAT FMT, uint8_t DEPTH, uint8_t SHIFT = 0>
+    template <typename pixel_t, CHROMA_FORMAT FMT, uint8_t DEPTH, uint8_t SHIFT = 0, bool UV = true>
     class FrameInterleaved : public FrameNonPacked<pixel_t, FMT, DEPTH>
     {
     public:
@@ -512,8 +512,8 @@ namespace frame
             skipped = 0;
             for (size_t i = 0; i < PixelChroma(false) / 2; i++)
             {
-                m_raw.U[i + skipped] = p[2 * i] >> SHIFT;
-                m_raw.V[i + skipped] = p[2 * i + 1] >> SHIFT;
+                m_raw.U[i + skipped] = p[2 * i + !UV] >> SHIFT;
+                m_raw.V[i + skipped] = p[2 * i + UV] >> SHIFT;
                 if (i % widthChroma == widthChroma - 1)
                 {
                     skipped += widthChromaPadded - widthChroma;
@@ -534,8 +534,8 @@ namespace frame
             p += m_raw.Y.size();
             for (size_t i = 0; i < m_raw.U.size(); i++)
             {
-                p[2 * i] = static_cast<pixel_t>(m_raw.U[i] << SHIFT);
-                p[2 * i + 1] = static_cast<pixel_t>(m_raw.V[i] << SHIFT);
+                p[2 * i + !UV] = static_cast<pixel_t>(m_raw.U[i] << SHIFT);
+                p[2 * i + UV] = static_cast<pixel_t>(m_raw.V[i] << SHIFT);
             }
         }
     };
@@ -544,6 +544,7 @@ namespace frame
     using Y8   = GREY;
     using Y800 = GREY;
     using NV12 = FrameInterleaved<uint8_t, CHROMA_FORMAT::YUV_420, 8>;
+    using NV21 = FrameInterleaved<uint8_t, CHROMA_FORMAT::YUV_420, 8, 0, false>;
     using P010 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_420, 10, 6>;
     using I420 = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_420, 8>;
     using IYUV = I420;
