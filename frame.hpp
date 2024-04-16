@@ -612,17 +612,18 @@ namespace frame
         }
     };
 
-    class Y210 : public Frame
+    template <typename pixel_t, uint8_t DEPTH, uint8_t SHIFT = 0>
+    class Y210_Y216_YUY2 : public Frame
     {
     public:
         struct Pixel
         {
-            uint32_t Y : 16;
-            uint32_t Chroma : 16;  // even for U, odd for V
+            pixel_t Y : sizeof(pixel_t) * 4;
+            pixel_t Chroma : sizeof(pixel_t) * 4;  // even for U, odd for V
         };
 
     public:
-        Y210(size_t w, size_t h, const std::string& name = "") : Frame(w, h, name) {}
+        Y210_Y216_YUY2(size_t w, size_t h, const std::string& name = "") : Frame(w, h, name) {}
 
         size_t FrameSize(bool padded) const override
         {
@@ -636,7 +637,7 @@ namespace frame
 
         uint8_t GetBitDepth() const override
         {
-            return 10;
+            return DEPTH;
         }
 
         bool HasAChannel() const override
@@ -650,14 +651,14 @@ namespace frame
             size_t skipped = 0;
             for (size_t i = 0; i < m_w * m_h; ++i)
             {
-                m_raw.Y[i + skipped] = p[i].Y >> 6;
+                m_raw.Y[i + skipped] = p[i].Y >> SHIFT;
                 if ((i + skipped) % 2 == 0)
                 {
-                    m_raw.U[(i + skipped) / 2] = p[i].Chroma >> 6;
+                    m_raw.U[(i + skipped) / 2] = p[i].Chroma >> SHIFT;
                 }
                 else
                 {
-                    m_raw.V[(i + skipped) / 2] = p[i].Chroma >> 6;
+                    m_raw.V[(i + skipped) / 2] = p[i].Chroma >> SHIFT;
                 }
                 if (i % m_w == m_w - 1)
                 {
@@ -673,18 +674,23 @@ namespace frame
             auto p = reinterpret_cast<Pixel*>(data);
             for (size_t i = 0; i < m_raw.Y.size(); ++i)
             {
-                p[i].Y = m_raw.Y[i] << 6;
+                p[i].Y = m_raw.Y[i] << SHIFT;
                 if (i % 2 == 0)
                 {
-                    p[i].Chroma = m_raw.U[i / 2] << 6;
+                    p[i].Chroma = m_raw.U[i / 2] << SHIFT;
                 }
                 else
                 {
-                    p[i].Chroma = m_raw.V[i / 2] << 6;
+                    p[i].Chroma = m_raw.V[i / 2] << SHIFT;
                 }
             }
         }
     };
+
+    using Y210 = Y210_Y216_YUY2<uint32_t, 10, 6>;
+    using Y216 = Y210_Y216_YUY2<uint32_t, 16>;
+    using YUY2 = Y210_Y216_YUY2<uint16_t, 8>;
+    using YUYV = YUY2;
 }
 
 #pragma pack(pop)
