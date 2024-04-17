@@ -521,106 +521,20 @@ namespace frame
         }
     };
 
-    using GREY = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_400, 8>;
-    using Y8   = GREY;
-    using Y800 = GREY;
-    using I400 = GREY;
+    using I400 = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_400, 8>;
+    using I420 = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_420, 8>;
     using NV12 = FrameInterleaved<uint8_t, CHROMA_FORMAT::YUV_420, 8>;
-    using NV21 = FrameInterleaved<uint8_t, CHROMA_FORMAT::YUV_420, 8, 0, false>;
     using P010 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_420, 10, 6>;
     using P012 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_420, 12>;
     using P016 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_420, 16>;
-    using I420 = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_420, 8>;
+    using NV21 = FrameInterleaved<uint8_t, CHROMA_FORMAT::YUV_420, 8, 0, false>;
     using I422 = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_422, 8>;
     using NV16 = FrameInterleaved<uint8_t, CHROMA_FORMAT::YUV_422, 8>;
     using P210 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_422, 10>;
     using P216 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_422, 16>;
-    using IYUV = I420;
-
-    template <typename pixel_t, uint8_t DEPTH>
-    class Packed444A : public Frame
-    {
-    public:
-        Packed444A(size_t w, size_t h, const std::string &name = "") : Frame(w, h, name) {}
-
-        size_t FrameSize(bool padded) const override
-        {
-            return (padded ? m_wPadded * m_hPadded : m_w * m_h) * sizeof(pixel_t);
-        }
-
-        CHROMA_FORMAT GetChromaFmt() const override
-        {
-            return CHROMA_FORMAT::YUV_444;
-        }
-
-        uint8_t GetBitDepth() const override
-        {
-            return DEPTH;
-        }
-
-        bool HasAChannel() const override
-        {
-            return true;
-        }
-
-        void ReadFrame(const void* data) override
-        {
-            auto p = reinterpret_cast<const pixel_t*>(data);
-            size_t skipped = 0;
-            for (size_t i = 0; i < m_w * m_h; ++i)
-            {
-                m_raw.A[i + skipped] = p[i].A;
-                m_raw.Y[i + skipped] = p[i].Y;
-                m_raw.U[i + skipped] = p[i].U;
-                m_raw.V[i + skipped] = p[i].V;
-                if (i % m_w == m_w - 1)
-                {
-                    skipped += m_wPadded - m_w;
-                }
-            }
-
-            ReplicateBoundary();
-        }
-
-        void WriteFrame(void* data) const override
-        {
-            auto p = reinterpret_cast<pixel_t*>(data);
-            for (size_t i = 0; i < m_raw.A.size(); ++i)
-            {
-                p[i].A = m_raw.A[i];
-                p[i].Y = m_raw.Y[i];
-                p[i].U = m_raw.U[i];
-                p[i].V = m_raw.V[i];
-            }
-        }
-    };
-
-    struct PixelY410
-    {
-        uint32_t U : 10;
-        uint32_t Y : 10;
-        uint32_t V : 10;
-        uint32_t A : 2;
-    };
-    using Y410 = Packed444A<PixelY410, 10>;
-
-    struct PixelY416
-    {
-        uint64_t U : 16;
-        uint64_t Y : 16;
-        uint64_t V : 16;
-        uint64_t A : 16;
-    };
-    using Y416 = Packed444A<PixelY416, 16>;
-
-    struct PixelAYUV
-    {
-        uint32_t V : 8;
-        uint32_t U : 8;
-        uint32_t Y : 8;
-        uint32_t A : 8;
-    };
-    using AYUV = Packed444A<PixelAYUV, 8>;
+    // todo: I440
+    // todo: I444
+    // todo: NV42
 
     template <typename pixel_t, uint8_t DEPTH, uint8_t SHIFT = 0>
     class Y210_Y216_YUY2 : public Frame
@@ -697,10 +611,101 @@ namespace frame
         }
     };
 
-    using Y210 = Y210_Y216_YUY2<uint32_t, 10, 6>;
-    using Y216 = Y210_Y216_YUY2<uint32_t, 16>;
     using YUY2 = Y210_Y216_YUY2<uint16_t, 8>;
     using YUYV = YUY2;
+    // todo: UYVY
+    using Y210 = Y210_Y216_YUY2<uint32_t, 10, 6>;
+    using Y216 = Y210_Y216_YUY2<uint32_t, 16>;
+
+    template <typename pixel_t, uint8_t DEPTH>
+    class Packed444A : public Frame
+    {
+    public:
+        Packed444A(size_t w, size_t h, const std::string &name = "") : Frame(w, h, name) {}
+
+        size_t FrameSize(bool padded) const override
+        {
+            return (padded ? m_wPadded * m_hPadded : m_w * m_h) * sizeof(pixel_t);
+        }
+
+        CHROMA_FORMAT GetChromaFmt() const override
+        {
+            return CHROMA_FORMAT::YUV_444;
+        }
+
+        uint8_t GetBitDepth() const override
+        {
+            return DEPTH;
+        }
+
+        bool HasAChannel() const override
+        {
+            return true;
+        }
+
+        void ReadFrame(const void* data) override
+        {
+            auto p = reinterpret_cast<const pixel_t*>(data);
+            size_t skipped = 0;
+            for (size_t i = 0; i < m_w * m_h; ++i)
+            {
+                m_raw.A[i + skipped] = p[i].A;
+                m_raw.Y[i + skipped] = p[i].Y;
+                m_raw.U[i + skipped] = p[i].U;
+                m_raw.V[i + skipped] = p[i].V;
+                if (i % m_w == m_w - 1)
+                {
+                    skipped += m_wPadded - m_w;
+                }
+            }
+
+            ReplicateBoundary();
+        }
+
+        void WriteFrame(void* data) const override
+        {
+            auto p = reinterpret_cast<pixel_t*>(data);
+            for (size_t i = 0; i < m_raw.A.size(); ++i)
+            {
+                p[i].A = m_raw.A[i];
+                p[i].Y = m_raw.Y[i];
+                p[i].U = m_raw.U[i];
+                p[i].V = m_raw.V[i];
+            }
+        }
+    };
+
+    struct PixelAYUV
+    {
+        uint32_t V : 8;
+        uint32_t U : 8;
+        uint32_t Y : 8;
+        uint32_t A : 8;
+    };
+    using AYUV = Packed444A<PixelAYUV, 8>;
+    using VUYX = AYUV;
+
+    struct PixelY410
+    {
+        uint32_t U : 10;
+        uint32_t Y : 10;
+        uint32_t V : 10;
+        uint32_t A : 2;
+    };
+    using Y410 = Packed444A<PixelY410, 10>;
+
+    struct PixelY416
+    {
+        uint64_t U : 16;
+        uint64_t Y : 16;
+        uint64_t V : 16;
+        uint64_t A : 16;
+    };
+    using Y416 = Packed444A<PixelY416, 16>;
+
+    // todo: NV24
+    // todo: P410
+    // todo: P416
 }
 
 #pragma pack(pop)
