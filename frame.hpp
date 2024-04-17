@@ -257,72 +257,53 @@ namespace frame
         size_t PixelChroma(bool padded) const
         {
             size_t pixelLuma = PixelLuma(padded);
-            size_t pixelChroma;
 
             switch (GetChromaFmt())
             {
             case CHROMA_FORMAT::YUV_420:
-                pixelChroma = pixelLuma / 2;
-                break;
+                return pixelLuma / 2;
             case CHROMA_FORMAT::YUV_422:
-                pixelChroma = pixelLuma;
-                break;
+                return pixelLuma;
             case CHROMA_FORMAT::YUV_444:
-                pixelChroma = pixelLuma * 2;
-                break;
+                return pixelLuma * 2;
             case CHROMA_FORMAT::YUV_400:
             default:
-                pixelChroma = 0;
-                break;
+                return 0;
             }
-
-            return pixelChroma;
         }
 
         size_t WidthChroma(bool padded) const
         {
             size_t widthLuma = padded ? m_wPadded : m_w;
-            size_t widthChroma;
 
             switch (GetChromaFmt())
             {
             case CHROMA_FORMAT::YUV_420:
             case CHROMA_FORMAT::YUV_422:
-                widthChroma = widthLuma / 2;
-                break;
+                return widthLuma / 2;
             case CHROMA_FORMAT::YUV_444:
-                widthChroma = widthLuma;
-                break;
+                return widthLuma;
             case CHROMA_FORMAT::YUV_400:
             default:
-                widthChroma = 0;
-                break;
+                return 0;
             }
-
-            return widthChroma;
         }
 
         size_t HeightChroma(bool padded) const
         {
             size_t heightLuma = padded ? m_hPadded : m_h;
-            size_t heightChroma;
 
             switch (GetChromaFmt())
             {
             case CHROMA_FORMAT::YUV_420:
-                heightChroma = heightLuma / 2;
-                break;
+                return heightLuma / 2;
             case CHROMA_FORMAT::YUV_422:
             case CHROMA_FORMAT::YUV_444:
-                heightChroma = heightLuma;
-                break;
+                return heightLuma;
             case CHROMA_FORMAT::YUV_400:
             default:
-                heightChroma = 0;
-                break;
+                return 0;
             }
-
-            return heightChroma;
         }
 
         void ReplicateBoundary()
