@@ -14,6 +14,8 @@ static frame::Frame** frmIn = nullptr;
 static frame::Frame** frmOut = nullptr;
 static size_t alignment = 2;
 static bool replicate = false;
+static size_t beg = 0;
+static size_t end = -2;
 
 int ParseArgs(int argc, char* argv[]);
 
@@ -39,25 +41,33 @@ int main(int argc, char* argv[])
     auto bufIn = new char[frmSzIn * coreNum];
     auto bufOut = new char[frmSzOut * coreNum];
 
-    while (fsIn.read(bufIn, frmSzIn * coreNum), fsIn.gcount())
+    if (!fsIn.seekg(std::ios_base::beg + frmSzIn * beg))
     {
-        size_t frameNum = std::min(fsIn.gcount() / frmSzIn, coreNum);
-        std::vector<std::future<void>> tasks;
-        for (size_t i = 0; i < frameNum; i++)
+        return -1;
+    }
+
+    size_t frmNum2Read = std::min(coreNum, end - beg + 1);
+    while (fsIn.read(bufIn, frmSzIn * frmNum2Read), fsIn.gcount())
+    {
+        size_t frmNumRead = std::min(fsIn.gcount() / frmSzIn, frmNum2Read);
+        std::vector<std::future<void>> tasks(frmNumRead);
+        for (size_t i = 0; i < frmNumRead; i++)
         {
-            tasks.push_back(std::async(
+            tasks[i] = std::async(
                 std::launch::async,
                 [=]() {
                     frmIn[i]->ReadFrame(bufIn + frmSzIn * i);
                     frmOut[i]->ConvertFrom(*frmIn[i]);
                     frmOut[i]->WriteFrame(bufOut + frmSzOut * i);
-                }));
+                });
         }
-        for (size_t i = 0; i < frameNum; i++)
+        for (size_t i = 0; i < frmNumRead; i++)
         {
             tasks[i].wait();
         }
-        fsOut.write(bufOut, frmSzOut * frameNum);
+        fsOut.write(bufOut, frmSzOut * frmNumRead);
+        beg += frmNumRead;
+        frmNum2Read = std::min(coreNum, end - beg + 1);
     }
 
     return 0;
@@ -67,6 +77,7 @@ void ParseFrameType(frame::Frame** frm, const char* type, const char* name);
 
 static int ParseArgs(int argc, char* argv[])
 {
+    size_t n = -1;
     for (auto i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "-w") == 0 ||
@@ -99,11 +110,29 @@ static int ParseArgs(int argc, char* argv[])
         {
             replicate = !!strtoull(argv[++i], nullptr, 10);
         }
+        else if (std::strcmp(argv[i], "-n:beg") == 0)
+        {
+            beg = strtoull(argv[++i], nullptr, 10);
+        }
+        else if (std::strcmp(argv[i], "-n:end") == 0)
+        {
+            end = strtoull(argv[++i], nullptr, 10);
+        }
+        else if (std::strcmp(argv[i], "-n") == 0)
+        {
+            n = strtoull(argv[++i], nullptr, 10);
+        }
     }
 
-    if (!frmIn[0] || !frmOut[0] || !fsIn || !fsOut)
+    if (!frmIn[0] || !frmOut[0] || !fsIn || !fsOut || beg > end ||
+        n == 0 || (end != -2 && n != -1))
     {
         return -1;
+    }
+
+    if (n != -1)
+    {
+        end = beg + n - 1;
     }
 
     frame::Frame::EnableLog(true);
