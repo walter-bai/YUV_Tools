@@ -140,6 +140,10 @@ namespace frame
                     }
                 }
             }
+            else if (chromaFmtSrc == CHROMA_FORMAT::YUV_420 && chromaFmtTarget == CHROMA_FORMAT::YUV_440)
+            {
+                // todo 440
+            }
             else if (chromaFmtSrc == CHROMA_FORMAT::YUV_420 && chromaFmtTarget == CHROMA_FORMAT::YUV_444)
             {
                 for (size_t h = 0; h < heightChromaPadded / 2; h++)
@@ -174,6 +178,10 @@ namespace frame
                     }
                 }
             }
+            else if (chromaFmtSrc == CHROMA_FORMAT::YUV_422 && chromaFmtTarget == CHROMA_FORMAT::YUV_440)
+            {
+                // todo 440
+            }
             else if (chromaFmtSrc == CHROMA_FORMAT::YUV_422 && chromaFmtTarget == CHROMA_FORMAT::YUV_420)
             {
                 for (size_t h = 0; h < heightChromaPadded * 2; h += 2)
@@ -187,6 +195,18 @@ namespace frame
                         m_raw.V[iDst] = (GET_SRC_PIXEL(V, iSrc0) + GET_SRC_PIXEL(V, iSrc1)) / 2;
                     }
                 }
+            }
+            else if (chromaFmtSrc == CHROMA_FORMAT::YUV_440 && chromaFmtTarget == CHROMA_FORMAT::YUV_420)
+            {
+                // todo 440
+            }
+            else if (chromaFmtSrc == CHROMA_FORMAT::YUV_440 && chromaFmtTarget == CHROMA_FORMAT::YUV_422)
+            {
+                // todo 440
+            }
+            else if (chromaFmtSrc == CHROMA_FORMAT::YUV_440 && chromaFmtTarget == CHROMA_FORMAT::YUV_444)
+            {
+                // todo 440
             }
             else if (chromaFmtSrc == CHROMA_FORMAT::YUV_444 && chromaFmtTarget == CHROMA_FORMAT::YUV_422)
             {
@@ -202,7 +222,11 @@ namespace frame
                     }
                 }
             }
-            else  // chromaFmtSrc == CHROMA_FORMAT::YUV_444 && chromaFmtTarget == CHROMA_FORMAT::YUV_420
+            else if (chromaFmtSrc == CHROMA_FORMAT::YUV_444 && chromaFmtTarget == CHROMA_FORMAT::YUV_440)
+            {
+                // todo 440
+            }
+            else if (chromaFmtSrc == CHROMA_FORMAT::YUV_444 && chromaFmtTarget == CHROMA_FORMAT::YUV_420)
             {
                 for (size_t h = 0; h < heightChromaPadded * 2; h += 2)
                 {
@@ -217,6 +241,9 @@ namespace frame
                         m_raw.V[iDst] = (GET_SRC_PIXEL(V, iSrc0) + GET_SRC_PIXEL(V, iSrc1) + GET_SRC_PIXEL(V, iSrc2) + GET_SRC_PIXEL(V, iSrc3)) / 4;
                     }
                 }
+            }
+            else
+            {
             }
 
 #undef GET_SRC_PIXEL
@@ -263,6 +290,7 @@ namespace frame
             case CHROMA_FORMAT::YUV_420:
                 return pixelLuma / 2;
             case CHROMA_FORMAT::YUV_422:
+            case CHROMA_FORMAT::YUV_440:
                 return pixelLuma;
             case CHROMA_FORMAT::YUV_444:
                 return pixelLuma * 2;
@@ -281,6 +309,7 @@ namespace frame
             case CHROMA_FORMAT::YUV_420:
             case CHROMA_FORMAT::YUV_422:
                 return widthLuma / 2;
+            case CHROMA_FORMAT::YUV_440:
             case CHROMA_FORMAT::YUV_444:
                 return widthLuma;
             case CHROMA_FORMAT::YUV_400:
@@ -296,6 +325,7 @@ namespace frame
             switch (GetChromaFmt())
             {
             case CHROMA_FORMAT::YUV_420:
+            case CHROMA_FORMAT::YUV_440:
                 return heightLuma / 2;
             case CHROMA_FORMAT::YUV_422:
             case CHROMA_FORMAT::YUV_444:
@@ -532,7 +562,7 @@ namespace frame
     using NV16 = FrameInterleaved<uint8_t, CHROMA_FORMAT::YUV_422, 8>;
     using P210 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_422, 10>;
     using P216 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_422, 16>;
-    // todo: I440
+    using I440 = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_440, 8>;
     // todo: I444
     // todo: NV42
 
