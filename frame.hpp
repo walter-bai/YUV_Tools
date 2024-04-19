@@ -142,7 +142,18 @@ namespace frame
             }
             else if (chromaFmtSrc == CHROMA_FORMAT::YUV_420 && chromaFmtTarget == CHROMA_FORMAT::YUV_440)
             {
-                // todo 440
+                for (size_t h = 0; h < heightChromaPadded; h++)
+                {
+                    for (size_t w = 0; w < widthChromaPadded / 2; w++)
+                    {
+                        auto iSrc = h * widthChromaPadded / 2 + w;
+                        auto iDst = h * widthChromaPadded + 2 * w;
+                        m_raw.U[iDst] = GET_SRC_PIXEL(U, iSrc);
+                        m_raw.U[iDst + 1] = m_raw.U[iDst];
+                        m_raw.V[iDst] = GET_SRC_PIXEL(V, iSrc);
+                        m_raw.V[iDst + 1] = m_raw.V[iDst];
+                    }
+                }
             }
             else if (chromaFmtSrc == CHROMA_FORMAT::YUV_420 && chromaFmtTarget == CHROMA_FORMAT::YUV_444)
             {
@@ -180,7 +191,17 @@ namespace frame
             }
             else if (chromaFmtSrc == CHROMA_FORMAT::YUV_422 && chromaFmtTarget == CHROMA_FORMAT::YUV_440)
             {
-                // todo 440
+                for (size_t h = 0; h < heightChromaPadded * 2; h++)
+                {
+                    for (size_t w = 0; w < widthChromaPadded / 2; w++)
+                    {
+                        auto iSrc = h * widthChromaPadded / 2 + w;
+                        auto iDst = h / 2 * widthChromaPadded + ((h % 2) ? 2 * w + 1 : 2 * w);
+
+                        m_raw.U[iDst] = GET_SRC_PIXEL(U, iSrc);
+                        m_raw.V[iDst] = GET_SRC_PIXEL(V, iSrc);
+                    }
+                }
             }
             else if (chromaFmtSrc == CHROMA_FORMAT::YUV_422 && chromaFmtTarget == CHROMA_FORMAT::YUV_420)
             {
