@@ -536,22 +536,29 @@ namespace frame
     // todo: I444
     // todo: NV42
 
-    template <typename pixel_t, uint8_t DEPTH, uint8_t SHIFT = 0>
-    class Y210_Y216_YUY2 : public Frame
+    template <typename pixel_t, uint8_t DEPTH, uint8_t SHIFT = 0, bool YFIRST = true>
+    class Packed422 : public Frame
     {
     public:
+        template <bool YFIRST>
         struct Pixel
         {
-            pixel_t Y : sizeof(pixel_t) * 4;
-            pixel_t Chroma : sizeof(pixel_t) * 4;  // even for U, odd for V
+            pixel_t Y      : sizeof(pixel_t) * 4;
+            pixel_t Chroma : sizeof(pixel_t) * 4;
+        };
+        template <>
+        struct Pixel<false>
+        {
+            pixel_t Chroma : sizeof(pixel_t) * 4;
+            pixel_t Y      : sizeof(pixel_t) * 4;
         };
 
     public:
-        Y210_Y216_YUY2(size_t w, size_t h, const std::string& name = "") : Frame(w, h, name) {}
+        Packed422(size_t w, size_t h, const std::string& name = "") : Frame(w, h, name) {}
 
         size_t FrameSize(bool padded) const override
         {
-            return (padded ? m_wPadded * m_hPadded : m_w * m_h) * sizeof(Pixel);
+            return (padded ? m_wPadded * m_hPadded : m_w * m_h) * sizeof(Pixel<YFIRST>);
         }
 
         CHROMA_FORMAT GetChromaFmt() const override
@@ -571,7 +578,7 @@ namespace frame
 
         void ReadFrame(const void* data) override
         {
-            auto p = reinterpret_cast<const Pixel*>(data);
+            auto p = reinterpret_cast<const Pixel<YFIRST>*>(data);
             size_t skipped = 0;
             for (size_t i = 0; i < m_w * m_h; ++i)
             {
@@ -595,7 +602,7 @@ namespace frame
 
         void WriteFrame(void* data) const override
         {
-            auto p = reinterpret_cast<Pixel*>(data);
+            auto p = reinterpret_cast<Pixel<YFIRST>*>(data);
             for (size_t i = 0; i < m_raw.Y.size(); ++i)
             {
                 p[i].Y = m_raw.Y[i] << SHIFT;
@@ -611,11 +618,11 @@ namespace frame
         }
     };
 
-    using YUY2 = Y210_Y216_YUY2<uint16_t, 8>;
+    using YUY2 = Packed422<uint16_t, 8>;
     using YUYV = YUY2;
-    // todo: UYVY
-    using Y210 = Y210_Y216_YUY2<uint32_t, 10, 6>;
-    using Y216 = Y210_Y216_YUY2<uint32_t, 16>;
+    using UYVY = Packed422<uint16_t, 8, 0, false>;
+    using Y210 = Packed422<uint32_t, 10, 6>;
+    using Y216 = Packed422<uint32_t, 16>;
 
     template <typename pixel_t, uint8_t DEPTH>
     class Packed444A : public Frame
