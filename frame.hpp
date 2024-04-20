@@ -628,8 +628,8 @@ namespace frame
     using I444 = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_444, 8>;
     using NV42 = FrameInterleaved<uint8_t, CHROMA_FORMAT::YUV_444, 8, 0, false>;
     using NV24 = FrameInterleaved<uint8_t, CHROMA_FORMAT::YUV_444, 8>;
-    // todo: P410
-    // todo: P416
+    using P410 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_444, 10>;
+    using P416 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_444, 16>;
 
     template <typename pixel_t, uint8_t DEPTH, uint8_t SHIFT = 0, bool YFIRST = true>
     class Packed422 : public Frame

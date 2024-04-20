@@ -179,8 +179,8 @@ static void ParseFrameType(frame::Frame** frm, const char* type, const char* nam
     CHECK_TYPE_AND_CREATE(Y410);
     CHECK_TYPE_AND_CREATE(Y416);
     CHECK_TYPE_AND_CREATE(NV24);
-    // CHECK_TYPE_AND_CREATE(P410);
-    // CHECK_TYPE_AND_CREATE(P416);
+    CHECK_TYPE_AND_CREATE(P410);
+    CHECK_TYPE_AND_CREATE(P416);
 
 #undef CHECK_TYPE_AND_CREATE
 }
