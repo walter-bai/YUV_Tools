@@ -625,7 +625,7 @@ namespace frame
     using P210 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_422, 10>;
     using P216 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_422, 16>;
     using I440 = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_440, 8>;
-    // todo: I444
+    using I444 = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_444, 8>;
     // todo: NV42
 
     template <typename pixel_t, uint8_t DEPTH, uint8_t SHIFT = 0, bool YFIRST = true>
