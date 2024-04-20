@@ -626,7 +626,10 @@ namespace frame
     using P216 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_422, 16>;
     using I440 = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_440, 8>;
     using I444 = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_444, 8>;
-    // todo: NV42
+    using NV42 = FrameInterleaved<uint8_t, CHROMA_FORMAT::YUV_444, 8, 0, false>;
+    using NV24 = FrameInterleaved<uint8_t, CHROMA_FORMAT::YUV_444, 8>;
+    // todo: P410
+    // todo: P416
 
     template <typename pixel_t, uint8_t DEPTH, uint8_t SHIFT = 0, bool YFIRST = true>
     class Packed422 : public Frame
@@ -801,10 +804,6 @@ namespace frame
         uint64_t A : 16;
     };
     using Y416 = Packed444A<PixelY416, 16>;
-
-    // todo: NV24
-    // todo: P410
-    // todo: P416
 }
 
 #pragma pack(pop)
