@@ -30,6 +30,8 @@ add_executable (${NAME_} ${SOURCES_} ${HEADERS_})
 
 # Test
 
+set (NAME_ unit_test)
+
 include(FetchContent)
 FetchContent_Declare(
   googletest
@@ -40,6 +42,26 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-add_executable(unit_test ${CMAKE_CURRENT_LIST_DIR}/test/unit_test.cpp)
-target_link_libraries(unit_test gtest_main)
-add_test(NAME unit_test COMMAND unit_test)
+set (
+    SOURCES_
+    ""
+)
+file (GLOB SOURCES_
+    ${CMAKE_CURRENT_LIST_DIR}/test/*.c,
+    ${CMAKE_CURRENT_LIST_DIR}/test/*.cpp
+)
+
+set (
+    HEADERS_
+    ""
+)
+file (GLOB HEADERS_
+    ${CMAKE_CURRENT_LIST_DIR}/test/*.h
+    ${CMAKE_CURRENT_LIST_DIR}/test/*.hpp
+)
+
+source_group (${NAME_} FILES ${SOURCES_} ${HEADERS_})
+
+add_executable (${NAME_} ${SOURCES_} ${HEADERS_})
+target_link_libraries(${NAME_} gtest_main)
+add_test(NAME ${NAME_} COMMAND ${NAME_})
