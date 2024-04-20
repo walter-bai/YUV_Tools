@@ -196,7 +196,6 @@ namespace frame
                     {
                         auto iSrc = h * widthChromaPadded / 2 + w;
                         auto iDst = h / 2 * widthChromaPadded + ((h % 2) ? 2 * w + 1 : 2 * w);
-
                         m_raw.U[iDst] = GET_SRC_PIXEL(U, iSrc);
                         m_raw.V[iDst] = GET_SRC_PIXEL(V, iSrc);
                     }
@@ -219,15 +218,46 @@ namespace frame
             }
             else if (chromaFmtSrc == CHROMA_FORMAT::YUV_440 && chromaFmtTarget == CHROMA_FORMAT::YUV_420)
             {
-                // todo 440
+                for (size_t h = 0; h < heightChromaPadded; h++)
+                {
+                    for (size_t w = 0; w < widthChromaPadded * 2; w += 2)
+                    {
+                        auto iSrc0 = h * widthChromaPadded * 2 + w;
+                        auto iSrc1 = h * widthChromaPadded * 2 + w + 1;
+                        auto iDst = h * widthChromaPadded + w / 2;
+                        m_raw.U[iDst] = (GET_SRC_PIXEL(U, iSrc0) + GET_SRC_PIXEL(U, iSrc1)) / 2;
+                        m_raw.V[iDst] = (GET_SRC_PIXEL(V, iSrc0) + GET_SRC_PIXEL(V, iSrc1)) / 2;
+                    }
+                }
             }
             else if (chromaFmtSrc == CHROMA_FORMAT::YUV_440 && chromaFmtTarget == CHROMA_FORMAT::YUV_422)
             {
-                // todo 440
+                for (size_t h = 0; h < heightChromaPadded / 2; h++)
+                {
+                    for (size_t w = 0; w < widthChromaPadded * 2; w++)
+                    {
+                        auto iSrc = h * widthChromaPadded * 2 + w;
+                        auto iDst = (h * 2 + (w % 2)) * widthChromaPadded + w / 2;
+                        m_raw.U[iDst] = GET_SRC_PIXEL(U, iSrc);
+                        m_raw.V[iDst] = GET_SRC_PIXEL(V, iSrc);
+                    }
+                }
             }
             else if (chromaFmtSrc == CHROMA_FORMAT::YUV_440 && chromaFmtTarget == CHROMA_FORMAT::YUV_444)
             {
-                // todo 440
+                for (size_t h = 0; h < heightChromaPadded / 2; h++)
+                {
+                    for (size_t w = 0; w < widthChromaPadded; w++)
+                    {
+                        auto iSrc = h * widthChromaPadded + w;
+                        auto iDst0 = h * 2 * widthChromaPadded + w;
+                        auto iDst1 = (h * 2 + 1) * widthChromaPadded + w;
+                        m_raw.U[iDst0] = GET_SRC_PIXEL(U, iSrc);
+                        m_raw.U[iDst1] = m_raw.U[iDst0];
+                        m_raw.V[iDst0] = GET_SRC_PIXEL(V, iSrc);
+                        m_raw.V[iDst1] = m_raw.V[iDst0];
+                    }
+                }
             }
             else if (chromaFmtSrc == CHROMA_FORMAT::YUV_444 && chromaFmtTarget == CHROMA_FORMAT::YUV_420)
             {
@@ -261,7 +291,17 @@ namespace frame
             }
             else if (chromaFmtSrc == CHROMA_FORMAT::YUV_444 && chromaFmtTarget == CHROMA_FORMAT::YUV_440)
             {
-                // todo 440
+                for (size_t h = 0; h < heightChromaPadded * 2; h += 2)
+                {
+                    for (size_t w = 0; w < widthChromaPadded; w++)
+                    {
+                        auto iSrc0 = h * widthChromaPadded + w;
+                        auto iSrc1 = (h + 1) * widthChromaPadded + w;
+                        auto iDst = h / 2 * widthChromaPadded + w;
+                        m_raw.U[iDst] = (GET_SRC_PIXEL(U, iSrc0) + GET_SRC_PIXEL(U, iSrc1)) / 2;
+                        m_raw.V[iDst] = (GET_SRC_PIXEL(V, iSrc0) + GET_SRC_PIXEL(V, iSrc1)) / 2;
+                    }
+                }
             }
             else
             {
