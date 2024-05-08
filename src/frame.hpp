@@ -637,7 +637,6 @@ namespace frame
         pixel_t Y      : sizeof(pixel_t) * 4;
         pixel_t Chroma : sizeof(pixel_t) * 4;
     };
-    
     template <typename pixel_t>
     struct PixelPacked422<pixel_t, false>
     {
