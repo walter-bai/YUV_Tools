@@ -35,3 +35,4 @@
 build/
 CMakeSettings.json
 .vs/
+.vscode/

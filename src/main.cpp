@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstring>
 #include <fstream>
 #include <future>
 #include <iostream>
@@ -17,7 +18,7 @@ static bool replicate = false;
 static size_t beg = 0;
 static size_t end = -2;
 
-int ParseArgs(int argc, char* argv[]);
+static int ParseArgs(int argc, char* argv[]);
 
 int main(int argc, char* argv[])
 {
@@ -73,7 +74,7 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-void ParseFrameType(frame::Frame** frm, const char* type, const char* name);
+static void ParseFrameType(frame::Frame** frm, const char* type, const char* name);
 
 static int ParseArgs(int argc, char* argv[])
 {
@@ -148,13 +149,13 @@ static void ParseFrameType(frame::Frame** frm, const char* type, const char* nam
             return std::toupper(static_cast<unsigned char>(ch));
         });
 
+    using namespace frame;
+#define CHECK_TYPE_AND_CREATE(T) else if (#T == tp)  for (size_t i = 0; i < coreNum; i++) frm[i] = CREATE_FRAME(T, w, h, name)
+
     if (tp.empty())
     {
         return;
     }
-
-#define CHECK_TYPE_AND_CREATE(T) else if (#T == tp)  for (size_t i = 0; i < coreNum; i++) frm[i] = CREATE_FRAME(T, w, h, name)
-
     CHECK_TYPE_AND_CREATE(I400);
     CHECK_TYPE_AND_CREATE(I420);
     CHECK_TYPE_AND_CREATE(NV12);

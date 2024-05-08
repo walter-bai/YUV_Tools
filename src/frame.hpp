@@ -9,7 +9,7 @@
 #include "fourcc.h"
 
 #define CREATE_FRAME(fourcc, width, height, name) \
-  new frame::##fourcc(width, height, name)
+  new fourcc(width, height, name)
 
 #pragma pack(push, 1)
 
@@ -52,7 +52,7 @@ namespace frame
                     return;
                 }
 
-                std::exception e("The alignment used for padding must be an even number!");
+                std::invalid_argument e("The alignment used for padding must be an even number!");
                 throw e;
             }
 
@@ -72,7 +72,7 @@ namespace frame
             if (m_w != frame.m_w || m_wPadded != frame.m_wPadded ||
                 m_h != frame.m_h || m_hPadded != frame.m_hPadded)
             {
-                std::exception e("Incompatible frame type!");
+                std::invalid_argument e("Incompatible frame type!");
                 throw e;
             }
 
@@ -507,54 +507,54 @@ namespace frame
     class FramePlanar : public FrameNonPacked<pixel_t, FMT, DEPTH>
     {
     public:
-        FramePlanar(size_t w, size_t h, const std::string& name = "") : FrameNonPacked(w, h, name) {}
+        FramePlanar(size_t w, size_t h, const std::string& name = "") : FrameNonPacked<pixel_t, FMT, DEPTH>(w, h, name) {}
 
         void ReadFrame(const void* data) override
         {
             auto p = reinterpret_cast<const pixel_t*>(data);
             size_t skipped = 0;
-            for (size_t i = 0; i < PixelLuma(false); i++)
+            for (size_t i = 0; i < this->PixelLuma(false); i++)
             {
-                m_raw.Y[i + skipped] = p[i] >> SHIFT;
-                if (i % m_w == m_w - 1)
+                this->m_raw.Y[i + skipped] = p[i] >> SHIFT;
+                if (i % this->m_w == this->m_w - 1)
                 {
-                    skipped += m_wPadded - m_w;
+                    skipped += this->m_wPadded - this->m_w;
                 }
             }
 
-            auto widthChroma = WidthChroma(false);
-            auto widthChromaPadded = WidthChroma(true);
+            auto widthChroma = this->WidthChroma(false);
+            auto widthChromaPadded = this->WidthChroma(true);
 
-            p += PixelLuma(false);
+            p += this->PixelLuma(false);
             skipped = 0;
-            size_t pixelU = PixelChroma(false) / 2;
+            size_t pixelU = this->PixelChroma(false) / 2;
             for (size_t i = 0; i < pixelU; i++)
             {
-                m_raw.U[i + skipped] = p[i] >> SHIFT;
-                m_raw.V[i + skipped] = p[i + pixelU] >> SHIFT;
+                this->m_raw.U[i + skipped] = p[i] >> SHIFT;
+                this->m_raw.V[i + skipped] = p[i + pixelU] >> SHIFT;
                 if (i % widthChroma == widthChroma - 1)
                 {
                     skipped += widthChromaPadded - widthChroma;
                 }
             }
 
-            ReplicateBoundary();
+            this->ReplicateBoundary();
         }
 
         void WriteFrame(void* data) const override
         {
             auto p = reinterpret_cast<pixel_t*>(data);
-            for (size_t i = 0; i < m_raw.Y.size(); i++)
+            for (size_t i = 0; i < this->m_raw.Y.size(); i++)
             {
-                p[i] = static_cast<pixel_t>(m_raw.Y[i] << SHIFT);
+                p[i] = static_cast<pixel_t>(this->m_raw.Y[i] << SHIFT);
             }
 
-            p += m_raw.Y.size();
-            size_t pixelU = m_raw.U.size();
+            p += this->m_raw.Y.size();
+            size_t pixelU = this->m_raw.U.size();
             for (size_t i = 0; i < pixelU; i++)
             {
-                p[i] = static_cast<pixel_t>(m_raw.U[i] << SHIFT);
-                p[i + pixelU] = static_cast<pixel_t>(m_raw.V[i] << SHIFT);
+                p[i] = static_cast<pixel_t>(this->m_raw.U[i] << SHIFT);
+                p[i + pixelU] = static_cast<pixel_t>(this->m_raw.V[i] << SHIFT);
             }
         }
     };
@@ -563,52 +563,52 @@ namespace frame
     class FrameInterleaved : public FrameNonPacked<pixel_t, FMT, DEPTH>
     {
     public:
-        FrameInterleaved(size_t w, size_t h, const std::string& name = "") : FrameNonPacked(w, h, name) {}
+        FrameInterleaved(size_t w, size_t h, const std::string& name = "") : FrameNonPacked<pixel_t, FMT, DEPTH>(w, h, name) {}
 
         void ReadFrame(const void* data) override
         {
             auto p = reinterpret_cast<const pixel_t*>(data);
             size_t skipped = 0;
-            for (size_t i = 0; i < PixelLuma(false); i++)
+            for (size_t i = 0; i < this->PixelLuma(false); i++)
             {
-                m_raw.Y[i + skipped] = p[i] >> SHIFT;
-                if (i % m_w == m_w - 1)
+                this->m_raw.Y[i + skipped] = p[i] >> SHIFT;
+                if (i % this->m_w == this->m_w - 1)
                 {
-                    skipped += m_wPadded - m_w;
+                    skipped += this->m_wPadded - this->m_w;
                 }
             }
 
-            auto widthChroma = WidthChroma(false);
-            auto widthChromaPadded = WidthChroma(true);
+            auto widthChroma = this->WidthChroma(false);
+            auto widthChromaPadded = this->WidthChroma(true);
 
-            p += PixelLuma(false);
+            p += this->PixelLuma(false);
             skipped = 0;
-            for (size_t i = 0; i < PixelChroma(false) / 2; i++)
+            for (size_t i = 0; i < this->PixelChroma(false) / 2; i++)
             {
-                m_raw.U[i + skipped] = p[2 * i + !UV] >> SHIFT;
-                m_raw.V[i + skipped] = p[2 * i + UV] >> SHIFT;
+                this->m_raw.U[i + skipped] = p[2 * i + !UV] >> SHIFT;
+                this->m_raw.V[i + skipped] = p[2 * i + UV] >> SHIFT;
                 if (i % widthChroma == widthChroma - 1)
                 {
                     skipped += widthChromaPadded - widthChroma;
                 }
             }
 
-            ReplicateBoundary();
+            this->ReplicateBoundary();
         }
 
         void WriteFrame(void* data) const override
         {
             auto p = reinterpret_cast<pixel_t*>(data);
-            for (size_t i = 0; i < m_raw.Y.size(); i++)
+            for (size_t i = 0; i < this->m_raw.Y.size(); i++)
             {
-                p[i] = static_cast<pixel_t>(m_raw.Y[i] << SHIFT);
+                p[i] = static_cast<pixel_t>(this->m_raw.Y[i] << SHIFT);
             }
 
-            p += m_raw.Y.size();
-            for (size_t i = 0; i < m_raw.U.size(); i++)
+            p += this->m_raw.Y.size();
+            for (size_t i = 0; i < this->m_raw.U.size(); i++)
             {
-                p[2 * i + !UV] = static_cast<pixel_t>(m_raw.U[i] << SHIFT);
-                p[2 * i + UV] = static_cast<pixel_t>(m_raw.V[i] << SHIFT);
+                p[2 * i + !UV] = static_cast<pixel_t>(this->m_raw.U[i] << SHIFT);
+                p[2 * i + UV] = static_cast<pixel_t>(this->m_raw.V[i] << SHIFT);
             }
         }
     };
@@ -631,29 +631,29 @@ namespace frame
     using P410 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_444, 10>;
     using P416 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_444, 16>;
 
+    template <typename pixel_t, bool YFIRST>
+    struct PixelPacked422
+    {
+        pixel_t Y      : sizeof(pixel_t) * 4;
+        pixel_t Chroma : sizeof(pixel_t) * 4;
+    };
+    
+    template <typename pixel_t>
+    struct PixelPacked422<pixel_t, false>
+    {
+        pixel_t Chroma : sizeof(pixel_t) * 4;
+        pixel_t Y      : sizeof(pixel_t) * 4;
+    };
+
     template <typename pixel_t, uint8_t DEPTH, uint8_t SHIFT = 0, bool YFIRST = true>
     class Packed422 : public Frame
     {
-    public:
-        template <bool YFIRST>
-        struct Pixel
-        {
-            pixel_t Y      : sizeof(pixel_t) * 4;
-            pixel_t Chroma : sizeof(pixel_t) * 4;
-        };
-        template <>
-        struct Pixel<false>
-        {
-            pixel_t Chroma : sizeof(pixel_t) * 4;
-            pixel_t Y      : sizeof(pixel_t) * 4;
-        };
-
     public:
         Packed422(size_t w, size_t h, const std::string& name = "") : Frame(w, h, name) {}
 
         size_t FrameSize(bool padded) const override
         {
-            return (padded ? m_wPadded * m_hPadded : m_w * m_h) * sizeof(Pixel<YFIRST>);
+            return (padded ? m_wPadded * m_hPadded : m_w * m_h) * sizeof(PixelPacked422<pixel_t, YFIRST>);
         }
 
         CHROMA_FORMAT GetChromaFmt() const override
@@ -673,7 +673,7 @@ namespace frame
 
         void ReadFrame(const void* data) override
         {
-            auto p = reinterpret_cast<const Pixel<YFIRST>*>(data);
+            auto p = reinterpret_cast<const PixelPacked422<pixel_t, YFIRST>*>(data);
             size_t skipped = 0;
             for (size_t i = 0; i < m_w * m_h; ++i)
             {
@@ -697,7 +697,7 @@ namespace frame
 
         void WriteFrame(void* data) const override
         {
-            auto p = reinterpret_cast<Pixel<YFIRST>*>(data);
+            auto p = reinterpret_cast<PixelPacked422<pixel_t, YFIRST>*>(data);
             for (size_t i = 0; i < m_raw.Y.size(); ++i)
             {
                 p[i].Y = m_raw.Y[i] << SHIFT;
