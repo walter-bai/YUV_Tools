@@ -1,3 +1,5 @@
+#pragma once
+
 #define MAKEFOURCC(A, B, C, D) \
   ((((int)A)) + (((int)B) << 8) + (((int)C) << 16) + (((int)D) << 24))
 

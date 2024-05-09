@@ -1,3 +1,5 @@
+#pragma once
+
 enum class CHROMA_FORMAT
 {
     YUV_400 = 0,  // no chroma
