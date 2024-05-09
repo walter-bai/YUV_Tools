@@ -1,4 +1,5 @@
 #include <fstream>
+#include <memory>
 #include <vector>
 #include <string>
 #include <gtest/gtest.h>
@@ -11,20 +12,29 @@ class Tests : public ::testing::Test
 protected:
     void SetUp() override
     {
-        if (!m_inputData.empty())
+        if (m_read)
         {
             return;
         }
 
-        auto size = GetFileSize(m_inputName);
+        auto size = GetFileSize(InputName);
         EXPECT_NE(size, -1);
 
-        m_inputData.resize(size, 0);
-        std::ifstream file(m_inputName, std::ifstream::binary);
-        file.read(m_inputData.data(), size);
+        std::vector<char> data;
+        data.resize(size, 0);
+        std::ifstream file(InputName, std::ifstream::binary);
+        file.read(data.data(), size);
+
+        m_inputFrame.Allocate();
+        m_inputFrame.ReadFrame(data.data());
+
+        m_read = true;
     }
 
-    void TearDown() override {}
+    void TearDown() override
+    {
+        m_outputFrame.release();
+    }
 
     std::streamsize GetFileSize(const std::string& filename)
     {
@@ -51,27 +61,25 @@ protected:
     }
 protected:
     using InputFrame = frame::Y410;
-    static constexpr size_t m_inputW = 1920;
-    static constexpr size_t m_inputH = 1080;
-    static constexpr FOURCC m_inputFourCC = FOURCC::Y410;
-    const std::string m_inputName = "Test_1920x1080_1frame.y410";
-    std::vector<char> m_inputData;
+    static constexpr size_t InputW = 1920;
+    static constexpr size_t InputH = 1080;
+    static constexpr FOURCC InputFourCC = FOURCC::Y410;
+    static constexpr const char *InputName = "Test_1920x1080_1frame.y410";
+    bool m_read = false;
+    InputFrame m_inputFrame{InputW, InputH, "in"};
+    std::unique_ptr<frame::Frame> m_outputFrame;
 };
 
 TEST_F(Tests, SelfConversion)
 {
-    InputFrame in(m_inputW, m_inputH, "in");
-    in.Allocate();
-    in.ReadFrame(m_inputData.data());
-    
-    InputFrame out(m_inputW, m_inputH, "out");
-    out.ConvertFrom(in);
+    m_outputFrame = std::make_unique<InputFrame>(InputW, InputH, "out");
+    m_outputFrame->ConvertFrom(m_inputFrame);
 
-    std::vector<char> data(out.FrameSize(true));
-    EXPECT_EQ(data.size(), in.FrameSize(false));  // out frame should have no padding
+    std::vector<char> data(m_outputFrame->FrameSize(true));
+    EXPECT_EQ(data.size(), m_inputFrame.FrameSize(false));  // out frame should have no padding
 
-    out.WriteFrame(data.data());
-    EXPECT_EQ(GetSHA256(data), g_sha256.at(m_inputFourCC));
+    m_outputFrame->WriteFrame(data.data());
+    EXPECT_EQ(GetSHA256(data), g_sha256.at(InputFourCC));
 }
 
 int main(int argc, char **argv)
