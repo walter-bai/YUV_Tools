@@ -5,9 +5,28 @@
 #include <gtest/gtest.h>
 #include "picosha2.h"
 #include "sha256.h"
-#include "../src/frame.hpp"
+#include "../src/frame_converter.hpp"
 
-class Tests : public ::testing::Test
+class IStream
+{
+public:
+    void open(const std::string& filename, std::ios_base::openmode mode)
+    {
+        if (m_data.count(filename))
+        {
+            return;
+        }
+
+        std::ifstream ifs;
+        ifs.open(filename, mode);
+    }
+
+private:
+    std::map<std::string, std::vector<char>> m_data;
+    std::string m_file;
+};
+
+class FrameConverterTest : public ::testing::Test
 {
 protected:
     void SetUp() override
@@ -48,7 +67,7 @@ protected:
         return file.tellg();
     }
 
-    std::string GetSHA256(const std::vector<char> &data)
+    std::string GetSHA256(const std::vector<char>& data)
     {
         picosha2::hash256_one_by_one hasher;
         hasher.process(data.begin(), data.end());
@@ -64,13 +83,13 @@ protected:
     static constexpr size_t InputW = 1920;
     static constexpr size_t InputH = 1080;
     static constexpr FOURCC InputFourCC = FOURCC::Y410;
-    static constexpr const char *InputName = "Test_1920x1080_1frame.y410";
+    static constexpr const char* InputName = "Test_1920x1080_1frame.y410";
     bool m_read = false;
-    InputFrame m_inputFrame{InputW, InputH, "in"};
+    InputFrame m_inputFrame{ InputW, InputH, "in" };
     std::unique_ptr<frame::Frame> m_outputFrame;
 };
 
-TEST_F(Tests, SelfConversion)
+TEST_F(FrameConverterTest, SelfConversion)
 {
     m_outputFrame = std::make_unique<InputFrame>(InputW, InputH, "out");
     m_outputFrame->ConvertFrom(m_inputFrame);
@@ -82,7 +101,7 @@ TEST_F(Tests, SelfConversion)
     EXPECT_EQ(GetSHA256(data), g_sha256.at(InputFourCC));
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     ::testing::InitGoogleTest(&argc, argv);
 
