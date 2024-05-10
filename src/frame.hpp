@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 #include "chroma_format.h"
-#include "fourcc.h"
 
 #define CREATE_FRAME(fourcc, width, height, name) \
   new fourcc(width, height, name)
