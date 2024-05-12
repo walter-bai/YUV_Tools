@@ -14,7 +14,7 @@ namespace converter
     public:
         FrameConverter() = default;
 
-        int Execute(int argc, char** argv)
+        int Execute(int argc, const char* const * argv)
         {
             frmIn = new frame::Frame * [coreNum] {nullptr};
             frmOut = new frame::Frame * [coreNum] {nullptr};
@@ -114,7 +114,7 @@ namespace converter
 #undef CHECK_TYPE_AND_CREATE
         }
 
-        int ParseArgs(int argc, char** argv)
+        int ParseArgs(int argc, const char* const * argv)
         {
             size_t n = -1;
             for (auto i = 0; i < argc; ++i)

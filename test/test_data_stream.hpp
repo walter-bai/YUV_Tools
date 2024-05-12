@@ -38,7 +38,7 @@ public:
         auto& buf = m_data[m_file];
         auto sz = std::min(n, static_cast<std::streamsize>(buf.size()) - m_pos);
 
-        memcpy_s(s, sz, buf.data() + m_pos, sz);
+        memcpy(s, buf.data() + m_pos, sz);
         m_pos += sz;
         m_gcount = sz;
 
@@ -103,7 +103,7 @@ public:
             _data.resize(m_pos + n);
         }
 
-        memcpy_s(_data.data() + m_pos, n, s, n);
+        memcpy(_data.data() + m_pos, s, n);
         m_pos += n;
 
         return *this;
