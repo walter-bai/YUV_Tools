@@ -110,8 +110,10 @@ namespace frame
             size_t pixelChroma = PixelChroma(true);
             auto widthChromaPadded = WidthChroma(true);
             auto heightChromaPadded = HeightChroma(true);
-            m_raw.U.resize(pixelChroma / 2, 0);
-            m_raw.V.resize(pixelChroma / 2, 0);
+
+            auto uvDefault = static_cast<Raw::value_t>(1 << GetBitDepth()) >> 1;
+            m_raw.U.resize(pixelChroma / 2, uvDefault);
+            m_raw.V.resize(pixelChroma / 2, uvDefault);
             if (chromaFmtSrc == CHROMA_FORMAT::YUV_400 || chromaFmtTarget == CHROMA_FORMAT::YUV_400)
             {
                 return;

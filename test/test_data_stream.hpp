@@ -1,3 +1,5 @@
+#pragma once
+
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -90,18 +92,18 @@ public:
         std::ignore = mode;
 
         m_file = filename;
-        m_data.clear();
+        _data.clear();
         m_pos = 0;
     }
 
     TestDataOStream& write(const char* s, std::streamsize n)
     {
-        if (m_data.size() < m_pos + n)
+        if (_data.size() < m_pos + n)
         {
-            m_data.resize(m_pos + n);
+            _data.resize(m_pos + n);
         }
 
-        memcpy_s(m_data.data() + m_pos, n, s, n);
+        memcpy_s(_data.data() + m_pos, n, s, n);
         m_pos += n;
 
         return *this;
@@ -114,13 +116,13 @@ public:
 
     static const std::vector<char>& Get()
     {
-        return m_data;
+        return _data;
     }
 
 private:
-    static std::vector<char> m_data;
+    static std::vector<char> _data;
     std::string m_file;
     std::streamsize m_pos = 0;
 };
 
-std::vector<char> TestDataOStream::m_data;
+std::vector<char> TestDataOStream::_data;
