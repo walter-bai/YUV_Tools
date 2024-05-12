@@ -7,7 +7,7 @@
 static const std::map<FOURCC, std::string> g_sha256Input = 
 {
     {FOURCC::Y410, "202c0ab21698dd6801b407b0b821f25fda084bdee94e1d7ddded87805d354f41"},
-    {FOURCC::YUYV, "52c15c56128bf3d43c1905aaa8098797478dbccb41cf0c37f9db99ea24ffc30e"},
+    {FOURCC::VUYX, "52c15c56128bf3d43c1905aaa8098797478dbccb41cf0c37f9db99ea24ffc30e"},
     {FOURCC::I440, "d733d96f2486113d061bc13dd955389f80c3db6019113027128a4a58349e3b0d"},
     {FOURCC::YUYV, "6c4736681aad7f344e04060cf90815ca84f6d852fa53d91cad6d69baaf5286fb"},
     {FOURCC::NV12, "946b2078e9cf099191c8d2ac7cca414fb831fc2e9476d28af61502f2cf1e09e7"},
@@ -48,8 +48,8 @@ static const std::map<FOURCC, std::string> g_sha256ChromaSampling420 =
 
 static const std::map<FOURCC, std::string> g_sha256ChromaSampling400 =
 {
-    {FOURCC::VUYX, "058cf400e629af734fe533c7c11b23057e67ed9d4cc6307c3c7473978480308f"},
+    {FOURCC::I444, "e043ca69f227d4d28ef51aa0aa6478e5b57f5f4ce2813ef9f7c89a85ffc43a76"},
     {FOURCC::I440, "4cca98f536ad22666c8cec1e2f407619360fd2964b4315fad15a7e1415dbfe4b"},
     {FOURCC::I422, "4cca98f536ad22666c8cec1e2f407619360fd2964b4315fad15a7e1415dbfe4b"},
-    {FOURCC::P010, "27cabc61b5ea78dfc1ca90485c7374eca381cb608e61b61dbe22023e6c4789cd"},
+    {FOURCC::I420, "7addc83f60ddc9ac2126856cd08f60b6bbf8bae63758b902f45a0e006987212b"},
 };
