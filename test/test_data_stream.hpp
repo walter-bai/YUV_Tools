@@ -7,6 +7,10 @@
 #include <vector>
 #include "gtest/gtest.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 class TestDataIStream final
 {
 public:
@@ -75,6 +79,23 @@ private:
         }
 
         return file.tellg();
+    }
+
+    char* LoadResourceData(const std::string& resourceName, DWORD& dataSize)
+    {
+#ifdef _WIN32
+        HMODULE handle = GetModuleHandle(NULL);
+        HRSRC res = FindResource(handle, resourceName.c_str(), RT_RCDATA);
+        if (!res) {
+            return nullptr;
+        }
+        HGLOBAL resHandle = LoadResource(handle, res);
+        if (!resHandle) {
+            return nullptr;
+        }
+        dataSize = SizeofResource(handle, res);
+        return static_cast<char*>(LockResource(resHandle));
+#endif
     }
 
 private:
