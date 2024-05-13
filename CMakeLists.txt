@@ -57,18 +57,49 @@ if(WIN32)
     endforeach()
     target_sources(${TEST_NAME} PRIVATE ${RC_FILE})
 elseif(UNIX)
-    # Use objcopy to embed data in Linux executables
+    # Output header and source files
+    set(RESOURCES_HEADER "${CMAKE_CURRENT_BINARY_DIR}/resources.h")
+    set(RESOURCES_SOURCE "${CMAKE_CURRENT_BINARY_DIR}/resources.cpp")
+
+    # Begin writing the header and source files
+    file(WRITE ${RESOURCES_HEADER} "#pragma once\n#include <map>\n#include <string>\n\n")
+    file(WRITE ${RESOURCES_SOURCE} "#include \"resources.h\"\n\n")
+
+    # Declare a struct to hold data pointers
+    file(APPEND ${RESOURCES_HEADER} "struct BinaryData {\n    const unsigned char* start;\n    const unsigned char* end;\n};\n\n")
+    # Declare the map
+    file(APPEND ${RESOURCES_HEADER} "extern const std::map<std::string, BinaryData> g_binaryDataMap;\n\n")
+
+    # Start map definition in the source file
+    file(APPEND ${RESOURCES_SOURCE} "const std::map<std::string, BinaryData> g_binaryDataMap = {\n")
+
+    # Process each binary file
     foreach(BIN_FILE IN LISTS BIN_FILES)
         get_filename_component(FILE_NAME ${BIN_FILE} NAME)
+
+        # Add extern declarations to the header file
+        file(APPEND ${RESOURCES_HEADER} "extern \"C\" {\n")
+        file(APPEND ${RESOURCES_HEADER} "    extern const unsigned char _binary_${FILE_NAME}_start;\n")
+        file(APPEND ${RESOURCES_HEADER} "    extern const unsigned char _binary_${FILE_NAME}_end;\n")
+        file(APPEND ${RESOURCES_HEADER} "}\n")
+
+        # Append entries to the map in the source file
+        file(APPEND ${RESOURCES_SOURCE} "    {\"${FILE_NAME}\", {&_binary_${FILE_NAME}_start, &_binary_${FILE_NAME}_end}},\n")
+
         set(OBJECT_FILE "${CMAKE_CURRENT_BINARY_DIR}/${FILE_NAME}.o")
         add_custom_command(
             OUTPUT ${OBJECT_FILE}
-            COMMAND objcopy --input binary --output elf64-x86-64 --binary-architecture i386:x86-64 ${BIN_FILE} ${OBJECT_FILE}
+            WORKING_DIRECTORY ${TEST_DATA_DIR}  # Set the working directory to the test data directory
+            COMMAND objcopy --input binary --output elf64-x86-64 --binary-architecture i386:x86-64 ${FILE_NAME} ${OBJECT_FILE}
             DEPENDS ${BIN_FILE}
             COMMENT "Embedding ${BIN_FILE} using objcopy"
         )
         target_sources(${TEST_NAME} PRIVATE ${OBJECT_FILE})
     endforeach()
+
+    # Close the map definition in the source file
+    file(APPEND ${RESOURCES_SOURCE} "};\n")
+    target_sources(${TEST_NAME} PRIVATE ${RESOURCES_SOURCE})
 endif()
 
 add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
