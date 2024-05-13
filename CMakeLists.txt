@@ -18,6 +18,7 @@ source_group (${MAIN_NAME} FILES ${MAIN_SOURCES} ${MAIN_HEADERS})
 add_executable (${MAIN_NAME} ${MAIN_SOURCES} ${MAIN_HEADERS})
 
 # Test
+enable_testing()
 set (TEST_NAME unit_test)
 include(FetchContent)
 
@@ -103,4 +104,11 @@ elseif(UNIX)
     target_sources(${TEST_NAME} PRIVATE ${RESOURCES_SOURCE})
 endif()
 
-add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
+add_test(NAME ${TEST_NAME} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${TEST_NAME})
+# Custom command to run tests post-build
+add_custom_command(
+    TARGET ${TEST_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E echo "Running unit tests..."
+    COMMAND ${CMAKE_CTEST_COMMAND} -C $<CONFIGURATION> -R "^${TEST_NAME}$" --verbose
+    COMMENT "Verifying the unit tests..."
+)
