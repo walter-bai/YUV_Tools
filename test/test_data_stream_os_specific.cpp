@@ -4,6 +4,10 @@
 #include <windows.h>
 #endif
 
+#ifdef __linux__
+#include "resources.h"
+#endif
+
 const char* TestDataIStream::LoadResourceData(const std::string& resourceName, std::streamsize& dataSize)
 {
 #ifdef _WIN32
@@ -22,5 +26,16 @@ const char* TestDataIStream::LoadResourceData(const std::string& resourceName, s
 
     dataSize = SizeofResource(handle, res);
     return static_cast<const char*>(LockResource(resHandle));
+#endif
+
+#ifdef __linux__
+    if (g_binaryDataMap.count(resourceName))
+    {
+        const auto &buf = g_binaryDataMap.at(resourceName);
+        dataSize = buf.end - buf.start;
+        return buf.start;
+    }
+
+    return nullptr;
 #endif
 }

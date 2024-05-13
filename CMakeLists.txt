@@ -60,13 +60,14 @@ elseif(UNIX)
     # Output header and source files
     set(RESOURCES_HEADER "${CMAKE_CURRENT_BINARY_DIR}/resources.h")
     set(RESOURCES_SOURCE "${CMAKE_CURRENT_BINARY_DIR}/resources.cpp")
+    include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
     # Begin writing the header and source files
     file(WRITE ${RESOURCES_HEADER} "#pragma once\n#include <map>\n#include <string>\n\n")
     file(WRITE ${RESOURCES_SOURCE} "#include \"resources.h\"\n\n")
 
     # Declare a struct to hold data pointers
-    file(APPEND ${RESOURCES_HEADER} "struct BinaryData {\n    const unsigned char* start;\n    const unsigned char* end;\n};\n\n")
+    file(APPEND ${RESOURCES_HEADER} "struct BinaryData {\n    const char* start;\n    const char* end;\n};\n\n")
     # Declare the map
     file(APPEND ${RESOURCES_HEADER} "extern const std::map<std::string, BinaryData> g_binaryDataMap;\n\n")
 
@@ -79,8 +80,8 @@ elseif(UNIX)
 
         # Add extern declarations to the header file
         file(APPEND ${RESOURCES_HEADER} "extern \"C\" {\n")
-        file(APPEND ${RESOURCES_HEADER} "    extern const unsigned char _binary_${FILE_NAME}_start;\n")
-        file(APPEND ${RESOURCES_HEADER} "    extern const unsigned char _binary_${FILE_NAME}_end;\n")
+        file(APPEND ${RESOURCES_HEADER} "    extern const char _binary_${FILE_NAME}_start;\n")
+        file(APPEND ${RESOURCES_HEADER} "    extern const char _binary_${FILE_NAME}_end;\n")
         file(APPEND ${RESOURCES_HEADER} "}\n")
 
         # Append entries to the map in the source file
