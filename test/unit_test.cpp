@@ -1,7 +1,8 @@
 #include "../src/frame_converter.hpp"
+#include "gtest/gtest.h"
 #include "picosha2.h"
 #include "sha256.h"
-#include "test_data_stream.hpp"
+#include "test_data_stream.h"
 
 class FrameConverterTest : public ::testing::Test
 {
