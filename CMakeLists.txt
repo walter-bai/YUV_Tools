@@ -43,4 +43,32 @@ file (GLOB TEST_HEADERS
 source_group (${TEST_NAME} FILES ${TEST_SOURCES} ${TEST_HEADERS})
 add_executable (${TEST_NAME} ${TEST_SOURCES} ${TEST_HEADERS})
 target_link_libraries(${TEST_NAME} gtest_main)
+
+# Resource embedding
+set(TEST_DATA_DIR ${CMAKE_CURRENT_LIST_DIR}/test/data)
+file(GLOB BIN_FILES "${TEST_DATA_DIR}/*")
+if(WIN32)
+    # Generate .rc file for Windows
+    set(RC_FILE "${CMAKE_CURRENT_BINARY_DIR}/resources.rc")
+    file(WRITE ${RC_FILE} "// Generated resources file\n")
+    foreach(BIN_FILE IN LISTS BIN_FILES)
+        get_filename_component(FILE_NAME ${BIN_FILE} NAME)
+        file(APPEND ${RC_FILE} "${FILE_NAME} RCDATA \"${BIN_FILE}\"\n")
+    endforeach()
+    target_sources(${TEST_NAME} PRIVATE ${RC_FILE})
+elseif(UNIX)
+    # Use objcopy to embed data in Linux executables
+    foreach(BIN_FILE IN LISTS BIN_FILES)
+        get_filename_component(FILE_NAME ${BIN_FILE} NAME)
+        set(OBJECT_FILE "${CMAKE_CURRENT_BINARY_DIR}/${FILE_NAME}.o")
+        add_custom_command(
+            OUTPUT ${OBJECT_FILE}
+            COMMAND objcopy --input binary --output elf64-x86-64 --binary-architecture i386:x86-64 ${BIN_FILE} ${OBJECT_FILE}
+            DEPENDS ${BIN_FILE}
+            COMMENT "Embedding ${BIN_FILE} using objcopy"
+        )
+        target_sources(${TEST_NAME} PRIVATE ${OBJECT_FILE})
+    endforeach()
+endif()
+
 add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
