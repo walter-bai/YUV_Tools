@@ -53,3 +53,9 @@ static const std::map<FOURCC, std::string> g_sha256ChromaSampling400 =
     {FOURCC::I422, "4cca98f536ad22666c8cec1e2f407619360fd2964b4315fad15a7e1415dbfe4b"},
     {FOURCC::I420, "7addc83f60ddc9ac2126856cd08f60b6bbf8bae63758b902f45a0e006987212b"},
 };
+
+static const std::map<bool, std::string> g_sha256Padding =
+{
+    {false, "d6d505f7d088da3d00f8be42c72836b3f29790bb12c5a591c0d03cdff7971e62"},
+    {true, "6e622177f27bba436c830cb3a3c8a16ca1f26c771dc0491d27bb2941f7bce803"},
+};

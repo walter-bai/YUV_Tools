@@ -229,6 +229,24 @@ TEST_F(FrameConverterTest, ChromaSampling400)
     }
 }
 
+TEST_F(FrameConverterTest, Padding)
+{
+    {
+        // zero padding
+        const char* cmdline[] = { "-w", "1918", "-h", "1078", "-i:yuyv", "Test_1918x1078_1frameYUYV", "-o:yuyv", "out.yuv", "-a", "16", "-r", "0"};
+        converter::FrameConverter<TestDataIStream, TestDataOStream> cvt;
+        cvt.Execute(sizeof(cmdline) / sizeof(cmdline[0]), cmdline);
+        EXPECT_EQ(GetSHA256(TestDataOStream::Get()), g_sha256Padding.at(false));
+    }
+    {
+        // replication padding
+        const char* cmdline[] = { "-w", "1918", "-h", "1078", "-i:yuyv", "Test_1918x1078_1frameYUYV", "-o:yuyv", "out.yuv", "-a", "16", "-r", "1" };
+        converter::FrameConverter<TestDataIStream, TestDataOStream> cvt;
+        cvt.Execute(sizeof(cmdline) / sizeof(cmdline[0]), cmdline);
+        EXPECT_EQ(GetSHA256(TestDataOStream::Get()), g_sha256Padding.at(true));
+    }
+}
+
 int main(int argc, char** argv)
 {
     ::testing::InitGoogleTest(&argc, argv);
