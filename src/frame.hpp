@@ -627,6 +627,7 @@ namespace frame
     using P216 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_422, 16>;
     using I440 = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_440, 8>;
     using I444 = FramePlanar<uint8_t, CHROMA_FORMAT::YUV_444, 8>;
+    using YUV444P10LE = FramePlanar<uint16_t, CHROMA_FORMAT::YUV_444, 10>;
     using NV42 = FrameInterleaved<uint8_t, CHROMA_FORMAT::YUV_444, 8, 0, false>;
     using NV24 = FrameInterleaved<uint8_t, CHROMA_FORMAT::YUV_444, 8>;
     using P410 = FrameInterleaved<uint16_t, CHROMA_FORMAT::YUV_444, 10>;

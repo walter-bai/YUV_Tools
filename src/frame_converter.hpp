@@ -102,6 +102,7 @@ namespace converter
             CHECK_TYPE_AND_CREATE(Y216);
             CHECK_TYPE_AND_CREATE(I440);
             CHECK_TYPE_AND_CREATE(I444);
+            CHECK_TYPE_AND_CREATE(YUV444P10LE);
             CHECK_TYPE_AND_CREATE(NV42);
             CHECK_TYPE_AND_CREATE(VUYX);
             CHECK_TYPE_AND_CREATE(AYUV);
