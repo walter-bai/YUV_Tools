@@ -4,7 +4,7 @@ This tool converts a YUV from one format to another, even the source and destina
 ## Build
 * `cd repo`
 * `mkdir build && cd build`
-* `cmake ..`
+* `cmake ..` or `cmake -DENABLE_TESTS=ON ..`
 
 ## Options
 - [-w|--width] pixel width of input YUV
