@@ -60,6 +60,46 @@ if(ENABLE_TESTS)
             file(APPEND ${RC_FILE} "${FILE_NAME} RCDATA \"${BIN_FILE}\"\n")
         endforeach()
         target_sources(${TEST_NAME} PRIVATE ${RC_FILE})
+    elseif(APPLE)
+        set(MACOS_RESOURCES_HEADER "${CMAKE_CURRENT_BINARY_DIR}/resources.h")
+        set(MACOS_RESOURCES_SOURCE "${CMAKE_CURRENT_BINARY_DIR}/resources.cpp")
+        set(MACOS_RESOURCE_ANCHOR_C "${CMAKE_CURRENT_BINARY_DIR}/macos_resource_anchor.c")
+        set(MACOS_RESOURCE_ANCHOR_O "${CMAKE_CURRENT_BINARY_DIR}/macos_resource_anchor.o")
+        set(MACOS_RESOURCE_SEGMENT "__YUVTEST")
+
+        file(WRITE ${MACOS_RESOURCES_HEADER} "#pragma once\n#include <map>\n#include <string>\n\nextern const std::map<std::string, std::string> g_binarySectionMap;\n")
+        file(WRITE ${MACOS_RESOURCES_SOURCE} "#include \"resources.h\"\n\nconst std::map<std::string, std::string> g_binarySectionMap = {\n")
+        file(WRITE ${MACOS_RESOURCE_ANCHOR_C} "\n")
+
+        add_custom_command(
+            OUTPUT ${MACOS_RESOURCE_ANCHOR_O}
+            COMMAND ${CMAKE_C_COMPILER} -c ${MACOS_RESOURCE_ANCHOR_C} -o ${MACOS_RESOURCE_ANCHOR_O}
+            DEPENDS ${MACOS_RESOURCE_ANCHOR_C}
+            COMMENT "Generating macOS resource anchor object"
+            VERBATIM
+        )
+
+        set(MACOS_RESOURCE_INDEX 0)
+        foreach(BIN_FILE IN LISTS BIN_FILES)
+            math(EXPR MACOS_RESOURCE_INDEX "${MACOS_RESOURCE_INDEX} + 1")
+            get_filename_component(FILE_NAME ${BIN_FILE} NAME)
+            set(SECTION_NAME "res${MACOS_RESOURCE_INDEX}")
+            set(OBJECT_FILE "${CMAKE_CURRENT_BINARY_DIR}/${SECTION_NAME}.o")
+
+            file(APPEND ${MACOS_RESOURCES_SOURCE} "    {\"${FILE_NAME}\", \"${SECTION_NAME}\"},\n")
+            add_custom_command(
+                OUTPUT ${OBJECT_FILE}
+                COMMAND ${CMAKE_LINKER} -r ${MACOS_RESOURCE_ANCHOR_O} -sectcreate ${MACOS_RESOURCE_SEGMENT} ${SECTION_NAME} ${BIN_FILE} -o ${OBJECT_FILE}
+                DEPENDS ${BIN_FILE} ${MACOS_RESOURCE_ANCHOR_O}
+                COMMENT "Embedding ${FILE_NAME} into macOS test binary"
+                VERBATIM
+            )
+            target_sources(${TEST_NAME} PRIVATE ${OBJECT_FILE})
+        endforeach()
+
+        file(APPEND ${MACOS_RESOURCES_SOURCE} "};\n")
+        target_sources(${TEST_NAME} PRIVATE ${MACOS_RESOURCES_SOURCE})
+        target_include_directories(${TEST_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     elseif(UNIX)
         # Output header and source files
         set(RESOURCES_HEADER "${CMAKE_CURRENT_BINARY_DIR}/resources.h")
@@ -108,11 +148,18 @@ if(ENABLE_TESTS)
     endif()
 
     add_test(NAME ${TEST_NAME} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${TEST_NAME})
+    get_property(IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+    if(IS_MULTI_CONFIG)
+        set(CTEST_RUN_COMMAND ${CMAKE_CTEST_COMMAND} -C $<CONFIGURATION> -R "^${TEST_NAME}$" --verbose)
+    else()
+        set(CTEST_RUN_COMMAND ${CMAKE_CTEST_COMMAND} -R "^${TEST_NAME}$" --verbose)
+    endif()
+
     # Custom command to run tests post-build
     add_custom_command(
         TARGET ${TEST_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E echo "Running unit tests..."
-        COMMAND ${CMAKE_CTEST_COMMAND} -C $<CONFIGURATION> -R "^${TEST_NAME}$" --verbose
+        COMMAND ${CTEST_RUN_COMMAND}
         COMMENT "Verifying the unit tests..."
     )
 endif()

@@ -4,6 +4,17 @@
 #include <windows.h>
 #endif
 
+#ifdef __APPLE__
+#include <mach-o/getsect.h>
+#include <mach-o/loader.h>
+#include "resources.h"
+#if defined(__LP64__)
+extern const mach_header_64 _mh_execute_header;
+#else
+extern const mach_header _mh_execute_header;
+#endif
+#endif
+
 #ifdef __linux__
 #include "resources.h"
 #endif
@@ -38,4 +49,28 @@ const char* TestDataIStream::LoadResourceData(const std::string& resourceName, s
 
     return nullptr;
 #endif
+
+#ifdef __APPLE__
+    const auto it = g_binarySectionMap.find(resourceName);
+    if (it == g_binarySectionMap.end())
+    {
+        return nullptr;
+    }
+
+    unsigned long size = 0;
+#if defined(__LP64__)
+    const auto* data = getsectiondata(&_mh_execute_header, "__YUVTEST", it->second.c_str(), &size);
+#else
+    const auto* data = getsectiondata(&_mh_execute_header, "__YUVTEST", it->second.c_str(), &size);
+#endif
+    if (!data)
+    {
+        return nullptr;
+    }
+
+    dataSize = static_cast<std::streamsize>(size);
+    return reinterpret_cast<const char*>(data);
+#endif
+
+    return nullptr;
 }
