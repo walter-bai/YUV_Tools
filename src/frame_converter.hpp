@@ -21,7 +21,7 @@ namespace converter
 
             if (ParseArgs(argc, argv) != 0)
             {
-                return -1;
+                return help ? 0 : -1;
             }
 
             for (size_t i = 0; i < coreNum; i++)
@@ -69,6 +69,12 @@ namespace converter
         }
 
     private:
+        void PrintHelp() const
+        {
+            std::cout << "Usage: yuv_tools -w <width> -h <height> -i:<format> <input> -o:<format> <output> "
+                         "[-a|--align <value>] [-r|--replicate <0|1>] [-n:beg <index>] [-n:end <index>] [-n <count>] [--help]\n";
+        }
+
         void ParseFrameType(frame::Frame** frm, const char* type, const char* name)
         {
             std::string tp(type);
@@ -118,9 +124,21 @@ namespace converter
         int ParseArgs(int argc, const char* const * argv)
         {
             size_t n = -1;
+            if (argc == 0)
+            {
+                help = true;
+                PrintHelp();
+                return -1;
+            }
             for (auto i = 0; i < argc; ++i)
             {
-                if (std::strcmp(argv[i], "-w") == 0 ||
+                if (std::strcmp(argv[i], "--help") == 0)
+                {
+                    help = true;
+                    PrintHelp();
+                    return -1;
+                }
+                else if (std::strcmp(argv[i], "-w") == 0 ||
                     std::strcmp(argv[i], "--width") == 0)
                 {
                     w = strtoull(argv[++i], nullptr, 10);
@@ -192,5 +210,6 @@ namespace converter
         bool replicate = false;
         size_t beg = 0;
         size_t end = -2;
+        bool help = false;
     };
 }
